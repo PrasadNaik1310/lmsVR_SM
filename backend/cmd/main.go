@@ -18,8 +18,8 @@ func main() {
 	fmt.Println("Starting new server")
 
 	if err := godotenv.Load(); err != nil {
-		log.Fatalf("Env Env file not found , main file error")
-		return
+		log.Println("Env Env file not found , main file error")
+
 	}
 	r := gin.Default()
 	r.Use(func(c *gin.Context) {

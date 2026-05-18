@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,8 +13,8 @@ import (
 )
 
 func DBInsert() {
-	dsn := "postgresql://neondb_owner:npg_ohi6U2LZxXDG@ep-rapid-band-ap5bewf7-pooler.c-7.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
-	//dsn := os.Getenv("db_url")
+
+	dsn := os.Getenv("db_url")
 	if dsn == "" {
 		log.Fatal("DB URL not set in environment variable 'db_url'")
 	}

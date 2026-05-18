@@ -1,0 +1,961 @@
+﻿1. USERS & AUTH MODULE
+
+users
+Purpose: Base authentication table for all users.
+Column
+Type
+Constraints
+id
+UUID
+PK
+first_name
+VARCHAR(100)
+NOT NULL
+last_name
+VARCHAR(100)
+
+email
+VARCHAR(255)
+UNIQUE, NOT NULL
+password_hash
+TEXT
+NOT NULL
+phone
+VARCHAR(20)
+UNIQUE
+role_id
+UUID
+FK → roles.id
+is_active
+BOOLEAN
+DEFAULT true
+last_login_at
+TIMESTAMP
+
+created_at
+TIMESTAMP
+DEFAULT now()
+updated_at
+TIMESTAMP
+DEFAULT now()
+
+roles
+Column
+Type
+Constraints
+id
+UUID
+PK
+name
+VARCHAR(50)
+UNIQUE, NOT NULL
+description
+TEXT
+
+Examples:
+    • super_admin
+    • admin
+    • teacher
+    • student
+    • finance_manager
+
+permissions
+Column
+Type
+Constraints
+id
+UUID
+PK
+name
+VARCHAR(100)
+UNIQUE, NOT NULL
+description
+TEXT
+
+
+role_permissions
+Column
+Type
+Constraints
+id
+UUID
+PK
+role_id
+UUID
+FK → roles.id
+permission_id
+UUID
+FK → permissions.id
+UNIQUE(role_id, permission_id)
+
+2. PROFILE TABLES
+
+students
+Column
+Type
+Constraints
+id
+UUID
+PK
+user_id
+UUID
+UNIQUE, FK → users.id
+enrollment_number
+VARCHAR(50)
+UNIQUE
+date_of_birth
+DATE
+
+address
+TEXT
+
+admission_date
+DATE
+
+created_at
+TIMESTAMP
+DEFAULT now()
+
+teachers
+Column
+Type
+Constraints
+id
+UUID
+PK
+user_id
+UUID
+UNIQUE, FK → users.id
+specialization
+VARCHAR(255)
+
+bio
+TEXT
+
+joining_date
+DATE
+
+created_at
+TIMESTAMP
+DEFAULT now()
+
+3. ADMISSIONS MODULE
+
+enquiries
+Column
+Type
+Constraints
+id
+UUID
+PK
+full_name
+VARCHAR(255)
+NOT NULL
+email
+VARCHAR(255)
+
+phone
+VARCHAR(20)
+
+interested_course_id
+UUID
+FK → courses.id
+status
+VARCHAR(50)
+CHECK(status IN ('new','contacted','approved','rejected'))
+notes
+TEXT
+
+created_at
+TIMESTAMP
+DEFAULT now()
+
+applications
+Column
+Type
+Constraints
+id
+UUID
+PK
+enquiry_id
+UUID
+FK → enquiries.id
+applied_course_id
+UUID
+FK → courses.id
+application_status
+VARCHAR(50)
+CHECK(application_status IN ('pending','approved','rejected'))
+remarks
+TEXT
+
+submitted_at
+TIMESTAMP
+DEFAULT now()
+
+4. MANAGE COMPANY MODULE
+
+academic_sessions
+Column
+Type
+Constraints
+id
+UUID
+PK
+name
+VARCHAR(100)
+UNIQUE
+start_date
+DATE
+NOT NULL
+end_date
+DATE
+NOT NULL
+is_active
+BOOLEAN
+DEFAULT true
+
+teams
+Column
+Type
+Constraints
+id
+UUID
+PK
+name
+VARCHAR(100)
+UNIQUE
+description
+TEXT
+
+created_at
+TIMESTAMP
+DEFAULT now()
+
+team_members
+Column
+Type
+Constraints
+id
+UUID
+PK
+team_id
+UUID
+FK → teams.id
+user_id
+UUID
+FK → users.id
+joined_at
+TIMESTAMP
+DEFAULT now()
+UNIQUE(team_id, user_id)
+
+5. COURSE / PACKAGE MANAGEMENT
+
+courses
+
+Column
+Type
+Constraints
+id
+UUID
+PK
+title
+VARCHAR(255)
+NOT NULL
+description
+TEXT
+
+level
+VARCHAR(50)
+
+thumbnail_url
+TEXT
+
+status
+VARCHAR(50)
+CHECK(status IN ('draft','published','archived'))
+total_seats
+INTEGER
+CHECK(total_seats >= 0)
+booked_seats
+INTEGER
+DEFAULT 0
+start_date
+DATE
+
+end_date
+DATE
+
+meet_link
+TEXT
+
+created_by
+UUID
+FK → teachers.id
+academic_session_id
+UUID
+FK → academic_sessions.id
+created_at
+TIMESTAMP
+DEFAULT now()
+updated_at
+TIMESTAMP
+DEFAULT now()
+
+batches
+Column
+Type
+Constraints
+id
+UUID
+PK
+course_id
+UUID
+UNIQUE, FK → courses.id
+batch_name
+VARCHAR(100)
+
+start_date
+DATE
+
+end_date
+DATE
+
+max_students
+INTEGER
+CHECK(max_students > 0)
+status
+VARCHAR(50)
+CHECK(status IN ('active','completed','cancelled'))
+created_at
+TIMESTAMP
+DEFAULT now()
+Because:
+1 batch = 1 course
+
+batch_teachers
+Column
+Type
+Constraints
+id
+UUID
+PK
+batch_id
+UUID
+FK → batches.id
+teacher_id
+UUID
+FK → teachers.id
+UNIQUE(batch_id, teacher_id)
+
+6. COURSE STRUCTURE
+
+course_modules
+Column
+Type
+Constraints
+id
+UUID
+PK
+course_id
+UUID
+FK → courses.id
+title
+VARCHAR(255)
+NOT NULL
+description
+TEXT
+
+position
+INTEGER
+NOT NULL
+
+lessons
+Column
+Type
+Constraints
+id
+UUID
+PK
+module_id
+UUID
+FK → course_modules.id
+title
+VARCHAR(255)
+NOT NULL
+description
+TEXT
+
+content_type
+VARCHAR(50)
+CHECK(content_type IN ('video','pdf','live_session'))
+content_url
+TEXT
+
+duration_minutes
+INTEGER
+
+position
+INTEGER
+
+is_published
+BOOLEAN
+DEFAULT false
+created_at
+TIMESTAMP
+DEFAULT now()
+
+lesson_files
+PDF attachments.
+Column
+Type
+Constraints
+id
+UUID
+PK
+lesson_id
+UUID
+FK → lessons.id
+file_name
+VARCHAR(255)
+
+file_url
+TEXT
+NOT NULL
+uploaded_by
+UUID
+FK → users.id
+uploaded_at
+TIMESTAMP
+DEFAULT now()
+
+7. ENROLLMENT & MEMBERSHIP
+
+enrollments
+Column
+Type
+Constraints
+id
+UUID
+PK
+student_id
+UUID
+FK → students.id
+course_id
+UUID
+FK → courses.id
+enrollment_status
+VARCHAR(50)
+CHECK(enrollment_status IN ('active','pending_payment','completed','cancelled'))
+joined_via_link
+BOOLEAN
+DEFAULT false
+joined_at
+TIMESTAMP
+DEFAULT now()
+UNIQUE(student_id, course_id)
+
+memberships
+Column
+Type
+Constraints
+id
+UUID
+PK
+student_id
+UUID
+UNIQUE, FK → students.id
+course_id
+UUID
+FK → courses.id
+total_fee
+NUMERIC(10,2)
+NOT NULL
+amount_paid
+NUMERIC(10,2)
+DEFAULT 0
+due_amount
+NUMERIC(10,2)
+DEFAULT 0
+grace_expiry_date
+DATE
+
+membership_status
+VARCHAR(50)
+CHECK(membership_status IN ('active','grace','expired'))
+created_at
+TIMESTAMP
+DEFAULT now()
+
+payments
+Column
+Type
+Constraints
+id
+UUID
+PK
+membership_id
+UUID
+FK → memberships.id
+student_id
+UUID
+FK → students.id
+amount
+NUMERIC(10,2)
+CHECK(amount > 0)
+payment_method
+VARCHAR(50)
+
+payment_status
+VARCHAR(50)
+CHECK(payment_status IN ('pending','success','failed'))
+transaction_reference
+VARCHAR(255)
+UNIQUE
+paid_at
+TIMESTAMP
+
+
+8. LIVE SESSIONS
+
+live_sessions
+Column
+Type
+Constraints
+id
+UUID
+PK
+course_id
+UUID
+FK → courses.id
+title
+VARCHAR(255)
+NOT NULL
+description
+TEXT
+
+session_date
+DATE
+NOT NULL
+start_time
+TIME
+NOT NULL
+end_time
+TIME
+NOT NULL
+meet_link
+TEXT
+
+session_status
+VARCHAR(50)
+CHECK(session_status IN ('scheduled','completed','cancelled'))
+created_by
+UUID
+FK → teachers.id
+created_at
+TIMESTAMP
+DEFAULT now()
+
+live_session_attendance
+Column
+Type
+Constraints
+id
+UUID
+PK
+live_session_id
+UUID
+FK → live_sessions.id
+student_id
+UUID
+FK → students.id
+attendance_status
+VARCHAR(50)
+CHECK(attendance_status IN ('present','absent','blocked'))
+joined_at
+TIMESTAMP
+
+left_at
+TIMESTAMP
+
+UNIQUE(live_session_id, student_id)
+
+9. COURSE PLANNING & LOGGING
+
+course_planners
+Column
+Type
+Constraints
+id
+UUID
+PK
+course_id
+UUID
+FK → courses.id
+lesson_id
+UUID
+FK → lessons.id
+planned_date
+DATE
+NOT NULL
+planned_start_time
+TIME
+
+planned_end_time
+TIME
+
+recurrence_type
+VARCHAR(50)
+CHECK(recurrence_type IN ('none','daily','weekly'))
+created_by
+UUID
+FK → teachers.id
+created_at
+TIMESTAMP
+DEFAULT now()
+
+course_logs
+Column
+Type
+Constraints
+id
+UUID
+PK
+planner_id
+UUID
+FK → course_planners.id
+completion_status
+VARCHAR(50)
+CHECK(completion_status IN ('completed','missed','cancelled'))
+remarks
+TEXT
+
+completed_at
+TIMESTAMP
+
+recorded_by
+UUID
+FK → teachers.id
+
+10. ANNOUNCEMENTS
+
+announcements
+Column
+Type
+Constraints
+id
+UUID
+PK
+title
+VARCHAR(255)
+NOT NULL
+message
+TEXT
+NOT NULL
+target_type
+VARCHAR(50)
+CHECK(target_type IN ('global','course'))
+created_by
+UUID
+FK → users.id
+created_at
+TIMESTAMP
+DEFAULT now()
+
+announcement_courses
+Column
+Type
+Constraints
+id
+UUID
+PK
+announcement_id
+UUID
+FK → announcements.id
+course_id
+UUID
+FK → courses.id
+UNIQUE(announcement_id, course_id)
+
+11. STUDENT SUBMISSIONS
+Future-ready for assignments submissions.
+
+lesson_submissions
+Column
+Type
+Constraints
+id
+UUID
+PK
+lesson_id
+UUID
+FK → lessons.id
+student_id
+UUID
+FK → students.id
+file_url
+TEXT
+NOT NULL
+submitted_at
+TIMESTAMP
+DEFAULT now()
+remarks
+TEXT
+
+
+12. INVITE SYSTEM
+
+course_invites
+Column
+Type
+Constraints
+id
+UUID
+PK
+course_id
+UUID
+FK → courses.id
+invite_code
+VARCHAR(100)
+UNIQUE
+expires_at
+TIMESTAMP
+
+created_by
+UUID
+FK → teachers.id
+created_at
+TIMESTAMP
+DEFAULT now()
+
+13. EMAIL NOTIFICATIONS
+
+notifications
+Column
+Type
+Constraints
+id
+UUID
+PK
+user_id
+UUID
+FK → users.id
+type
+VARCHAR(100)
+
+title
+VARCHAR(255)
+
+message
+TEXT
+
+is_read
+BOOLEAN
+DEFAULT false
+sent_email
+BOOLEAN
+DEFAULT false
+created_at
+TIMESTAMP
+DEFAULT now()
+
+
+
+
+MODULE WISE HIGH LEVEL FLOW ,
+1. Admissions Module Flow
+Student Enquiry Created
+    ↓
+Admin Reviews Enquiry
+    ↓
+Application Submitted
+    ↓
+Admin Approves / Rejects Application
+    ↓
+If Approved:
+    → Student Account Created
+    → Login Credentials Sent via Email
+
+2. Manage Company Module Flow
+Academic Session Flow
+Super Admin / Admin Creates Academic Session
+    ↓
+Courses Assigned To Academic Session
+    ↓
+Batches Created For Courses
+
+Team Management Flow
+Admin Creates Team
+    ↓
+Teachers / Admins Assigned To Team
+    ↓
+Team Access & Responsibilities Managed
+
+Course Package Management Flow
+Teacher/Admin Creates Course
+    ↓
+Set Course Details
+    → Course Name
+    → Level
+    → Start Date
+    → End Date
+    → Total Seats
+    ↓
+Publish Course
+    ↓
+Track Booked Seats & Course Status
+
+3. Membership Module Flow
+Student Enrolled Into Course
+    ↓
+Membership Record Created
+    ↓
+Payment Added
+    ↓
+System Calculates:
+    → Amount Paid
+    → Due Amount
+    → Grace Period
+    ↓
+Membership Status Updated
+    → Active
+    → Grace Period
+    → Expired
+
+4. CRM Dashboard Flow
+Dashboard Loads System Statistics
+    ↓
+Display:
+    → Total Students
+    → Active Courses
+    → Team Members
+    → Outstanding Fees
+    → Live Classes Today
+    ↓
+Admin Accesses Quick Actions:
+    → Add Student
+    → Create Batch
+    → Add Announcement
+    → Manage Payments
+    → View Notifications
+
+5. Course Creation Module Flow
+Teacher/Admin Creates Course
+    ↓
+Add Course Modules
+    ↓
+Add Lessons To Modules
+    ↓
+Attach PDFs / Resources
+    ↓
+Configure Meet Link
+    ↓
+Save As Draft
+    ↓
+Publish Course
+    ↓
+Generate Invite Link
+
+6. Course Planning & Logging Flow
+Course Planning Flow
+Teacher Creates Course Planner
+    ↓
+Select Lesson
+    ↓
+Schedule Date & Time
+    ↓
+Set Recurring Schedule (Optional)
+    ↓
+Planner Saved
+
+Course Logging Flow
+Scheduled Session Conducted
+    ↓
+Teacher Marks Session Status
+    → Completed
+    → Missed
+    → Cancelled
+    ↓
+Remarks Added
+    ↓
+Course Log Stored
+
+7. Course List Dashboard Flow
+Student Logs Into LMS
+    ↓
+System Fetches Enrolled Courses
+    ↓
+Display:
+    → Active Courses
+    → Course Status
+    → Upcoming Sessions
+    ↓
+Student Opens Course
+    ↓
+Access Lessons & Live Sessions
+
+8. Live Sessions Module Flow
+Teacher Schedules Live Session
+    ↓
+Session Linked To Course
+    ↓
+Students Receive Notification
+    ↓
+Students Join Google Meet
+    ↓
+Teacher Marks Attendance
+    ↓
+Attendance Stored
+    ↓
+Session Marked Completed
+
+9. Announcement Module Flow
+Admin / Teacher Creates Announcement
+    ↓
+Choose Audience:
+    → Global
+    → Course Specific
+    ↓
+Publish Announcement
+    ↓
+Notifications Sent To Target Users
+
+10. Enrollment & Invite Flow
+Teacher Generates Invite Link
+    ↓
+Student Opens Invite Link
+    ↓
+System Verifies Login
+    ↓
+Enrollment Created
+    ↓
+Membership Record Created
+    ↓
+Student Gets Course Access
+
+11. Attendance Flow
+Student Joins Live Session
+    ↓
+Teacher Opens Attendance Panel
+    ↓
+Mark:
+    → Present
+    → Absent
+    → Blocked
+    ↓
+Attendance Stored In System
+
+12. Notification & Email Flow
+System Event Triggered
+    ↓
+Examples:
+    → Application Approved
+    → Payment Successful
+    → Course Enrollment
+    → Live Session Scheduled
+    ↓
+Notification Created
+    ↓
+Email Sent To User
+

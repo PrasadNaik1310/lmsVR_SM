@@ -1,16 +1,19 @@
 # Start from the official Golang image
-FROM golang:1.21-alpine as builder
+FROM golang:1.25-alpine as builder
 
 WORKDIR /app
 
 # Install git (required for go mod)
 RUN apk add --no-cache git
 
+# Prefer using the local toolchain inside the container (avoid downloading toolchains)
+ENV GOTOOLCHAIN=local
+
 # Copy go mod and sum files
 COPY go.mod go.sum ./
 
-# Download dependencies
-RUN go mod download
+# Tidy and download dependencies
+RUN go mod tidy && go mod download
 
 # Copy the rest of the source code
 COPY . .

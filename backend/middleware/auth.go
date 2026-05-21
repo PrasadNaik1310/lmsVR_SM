@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 func AuthMiddleWare() gin.HandlerFunc {
@@ -57,27 +58,28 @@ func AuthMiddleWare() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		//c.Set("claims",claims)
-		//c.Set("UserEmail",claims["user_email"])
+		// Standardize: expect `user_id` claim to be a string UUID.
 		userIDRaw, ok := claims["user_id"]
 		if !ok {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id missing"})
 			c.Abort()
 			return
 		}
-
-		userIDFloat, ok := userIDRaw.(float64)
+		userIDStr, ok := userIDRaw.(string)
 		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user_id type"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user_id type in token; expected string UUID"})
+			c.Abort()
+			return
+		}
+		uid, err := uuid.Parse(userIDStr)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user_id value in token"})
 			c.Abort()
 			return
 		}
 
-		userID := uint(userIDFloat)
-		c.Set("user_id", userID)
-		c.Set("userId", userID)
-		c.Set("id", userID)
-		//c.Set("")
+		// set canonical context key to uuid.UUID
+		c.Set("user_id", uid)
 		c.Next()
 	}
 }

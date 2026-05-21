@@ -52,10 +52,10 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// Generate token
+	// Generate token. Store `user_id` as a string UUID to keep token claim types stable.
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_email": loginUser.Email,
-		"user_id":    loginUser.ID,
+		"user_id":    loginUser.ID.String(),
 		//setting expiry to 10000 hours for testing , to be changed in prod.
 		"exp": time.Now().Add(time.Hour * 10000).Unix(),
 	})
@@ -67,14 +67,15 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	log.Printf("Token generated successfully for user: %s (ID: %d)", loginUser.Email, loginUser.ID)
+	log.Printf("Token generated successfully for user: %s (ID: %s)", loginUser.Email, loginUser.ID.String())
 
 	c.JSON(http.StatusOK, gin.H{
 		"token": tokenString,
 		"user": gin.H{
 			"userEmail": loginUser.Email,
-			"userId":    loginUser.ID,
+			//	"userId":    loginUser.ID,
 			//"phone":      loginUser.Phoneno,
+			//"userId": loginUser.ID.String(),
 		},
 	})
 }

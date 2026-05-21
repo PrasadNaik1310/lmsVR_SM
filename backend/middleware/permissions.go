@@ -11,53 +11,28 @@ import (
 )
 
 // RequirePermission checks whether the authenticated user has the given permission name.
+
 func RequirePermission(permission string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// try multiple context keys that might be present
-		var userIDAny interface{}
-		var ok bool
-		if userIDAny, ok = c.Get("user_id"); !ok {
-			if userIDAny, ok = c.Get("userId"); !ok {
-				if userIDAny, ok = c.Get("id"); !ok {
-					c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
-					c.Abort()
-					return
-				}
-			}
+		userIDAny, ok := c.Get("user_id")
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+			c.Abort()
+			return
+		}
+
+		uid, ok := userIDAny.(uuid.UUID)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user id type in context"})
+			c.Abort()
+			return
 		}
 
 		var user models.User
-
-		switch v := userIDAny.(type) {
-		case string:
-			// try uuid
-			if uid, err := uuid.Parse(v); err == nil {
-				if err := db.DB.Where("id = ?", uid).First(&user).Error; err != nil {
-					c.JSON(http.StatusUnauthorized, gin.H{"error": "user not found"})
-					c.Abort()
-					return
-				}
-			} else {
-				// fallback: try numeric id
-				if err := db.DB.First(&user, v).Error; err != nil {
-					c.JSON(http.StatusUnauthorized, gin.H{"error": "user not found"})
-					c.Abort()
-					return
-				}
-			}
-		case uuid.UUID:
-			if err := db.DB.Where("id = ?", v).First(&user).Error; err != nil {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "user not found"})
-				c.Abort()
-				return
-			}
-		default:
-			// try numeric
-			if err := db.DB.First(&user, v).Error; err != nil {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "user not found"})
-				c.Abort()
-				return
-			}
+		if err := db.DB.Where("id = ?", uid).First(&user).Error; err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "user not found"})
+			c.Abort()
+			return
 		}
 
 		// load permission by name

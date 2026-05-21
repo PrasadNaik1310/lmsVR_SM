@@ -9,7 +9,8 @@ import (
 	"syscall"
 
 	"github.com/PrasadNaik1310/LMSVR_SM/db"
-	"github.com/PrasadNaik1310/LMSVR_SM/handlers"
+	//"github.com/PrasadNaik1310/LMSVR_SM/handlers"
+	"github.com/PrasadNaik1310/LMSVR_SM/routes"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -46,13 +47,8 @@ func main() {
 		})
 
 	})
-	api := r.Group("/lms")
-	{
-		auth := api.Group("/auth")
-		{
-			auth.POST("/login", handlers.Login)
-		}
-	}
+	// all routes are registered and managed in routes folder. No route is being called here in the main file.
+	routes.RegisterRoutes(r)
 	port := os.Getenv("port")
 	if port == "" {
 		log.Println("Port not found ")

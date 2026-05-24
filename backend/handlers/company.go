@@ -170,6 +170,54 @@ func CreateBatchForCourse(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"batch": batch})
 }
 
+func ListBatchesByCourse(c *gin.Context) {
+	courseIDStr := c.Param("course_id")
+	courseID, err := uuid.Parse(courseIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid course_id"})
+		return
+	}
+
+	page := 1
+	size := 20
+	if p := c.Query("page"); p != "" {
+		if parsed, parseErr := strconv.Atoi(p); parseErr == nil && parsed > 0 {
+			page = parsed
+		}
+	}
+	if s := c.Query("size"); s != "" {
+		if parsed, parseErr := strconv.Atoi(s); parseErr == nil && parsed > 0 {
+			size = parsed
+		}
+	}
+	status := c.Query("status")
+
+	var course models.Course
+	if err := db.DB.Where("id = ?", courseID).First(&course).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "course not found"})
+		return
+	}
+
+	query := db.DB.Model(&models.Batch{}).Where("course_id = ?", courseID)
+	if status != "" {
+		query = query.Where("status = ?", status)
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to count batches"})
+		return
+	}
+
+	var batches []models.Batch
+	if err := query.Offset((page - 1) * size).Limit(size).Find(&batches).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch batches"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"batches": batches, "page": page, "size": size, "total": total})
+}
+
 func GetBatchDetails(c *gin.Context) {
 	courseIDStr := c.Param("course_id")
 	batchIDStr := c.Param("batch_id")

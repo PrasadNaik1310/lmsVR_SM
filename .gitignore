@@ -144,3 +144,5 @@ vite.config.ts.timestamp-*
 # md files
 *.md
 !README.md
+#local compiled binary
+cmd

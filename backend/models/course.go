@@ -26,7 +26,7 @@ type Course struct {
 
 type Batch struct {
 	ID          uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
-	CourseID    uuid.UUID  `gorm:"type:uuid;unique" json:"course_id"`
+	CourseID    uuid.UUID  `gorm:"type:uuid" json:"course_id"`
 	BatchName   string     `gorm:"size:100" json:"batch_name"`
 	StartDate   *time.Time `json:"start_date,omitempty"`
 	EndDate     *time.Time `json:"end_date,omitempty"`

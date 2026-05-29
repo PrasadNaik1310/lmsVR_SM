@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { 
   listBatchesByCourse, 
   createBatchForCourse, 
   getBatchDetails, 
   listCoursesBySession, 
-  assignCourseToSession 
+  assignCourseToSession,
+  listCoursesForUser,
 } from "../api/manageCompany.js";
 
 const demo = {
@@ -32,11 +34,39 @@ const demo = {
 };
 
 export default function ManageCompanyBatches() {
+  const navigate = useNavigate();
   const [batches, setBatches] = useState([]);
+  const [courses, setCourses] = useState([]);
   const [sessionCourses, setSessionCourses] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const token = localStorage.getItem('auth_token');
+
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    navigate('/');
+  };
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      if (!token) return;
+      try {
+        setLoading(true);
+        const data = await listCoursesForUser({ page: 1, size: 20 }, token);
+        setCourses(data.courses || []);
+        // Auto-load batches for first course
+        if (data.courses && data.courses.length > 0) {
+          const courseData = await listBatchesByCourse(data.courses[0].id, { page: 1, size: 20 }, token);
+          setBatches(courseData.batches || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch courses for user', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCourses();
+  }, [token]);
 
   // Fetch batches by course
   const handleFetchBatchesByCourse = async (courseId) => {
@@ -151,6 +181,14 @@ export default function ManageCompanyBatches() {
                 <li className="px-3 py-2 rounded-lg hover:bg-slate-100">Batches</li>
                 <li className="px-3 py-2 rounded-lg hover:bg-slate-100">Internal Team</li>
               </ul>
+              <div className="mt-8 pt-6 border-t border-slate-200">
+                <button
+                  onClick={handleLogout}
+                  className="w-full px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 text-sm font-medium text-left"
+                >
+                  Logout
+                </button>
+              </div>
             </nav>
           </aside>
 
@@ -240,13 +278,13 @@ export default function ManageCompanyBatches() {
                   <h3 className="text-sm font-semibold text-slate-900">Batches</h3>
                   <div className="flex items-center gap-3">
                     <a 
-                      onClick={() => handleFetchBatchesByCourse(demo.courses[0]?.id)}
+                      onClick={() => handleFetchBatchesByCourse(courses[0]?.id || demo.courses[0]?.id)}
                       className="text-sm text-indigo-600 cursor-pointer"
                     >
                       View all
                     </a>
                     <button 
-                      onClick={() => handleCreateBatch(demo.courses[0]?.id)}
+                      onClick={() => handleCreateBatch(courses[0]?.id || demo.courses[0]?.id)}
                       className="rounded bg-white px-3 py-1 text-sm border border-slate-200"
                     >
                       + Add Batch
@@ -267,28 +305,36 @@ export default function ManageCompanyBatches() {
                       </tr>
                     </thead>
                     <tbody>
-                      {demo.batches.map((b) => (
-                        <tr key={b.id} className="border-t border-slate-100">
-                          <td className="px-4 py-3">{b.name}</td>
-                          <td className="px-4 py-3">{b.course}</td>
-                          <td className="px-4 py-3">{b.start}</td>
-                          <td className="px-4 py-3">{b.end}</td>
-                          <td className="px-4 py-3">{b.students}</td>
-                          <td className="px-4 py-3"><span className="rounded-full bg-emerald-50 px-2 py-1 text-xs text-emerald-700">{b.status}</span></td>
-                          <td className="px-4 py-3">
-                            <button 
-                              onClick={() => handleGetBatchDetails(demo.courses[0]?.id, b.id)}
-                              className="text-indigo-600 hover:text-indigo-700 text-sm"
-                            >
-                              View
-                            </button>
+                      {batches.length > 0 ? (
+                        batches.map((b, index) => (
+                          <tr key={b.id || b.ID || `${b.course_id || b.CourseID || "course"}-${b.batch_name || b.BatchName || index}-${index}`} className="border-t border-slate-100">
+                            <td className="px-4 py-3">{b.batch_name || b.name}</td>
+                            <td className="px-4 py-3">{(courses.find && courses.find(c => c.id === b.course_id)) ? (courses.find(c => c.id === b.course_id).title || courses.find(c => c.id === b.course_id).Title) : b.course || b.course_id}</td>
+                            <td className="px-4 py-3">{(b.start_date && new Date(b.start_date).toLocaleDateString()) || b.start}</td>
+                            <td className="px-4 py-3">{(b.end_date && new Date(b.end_date).toLocaleDateString()) || b.end}</td>
+                            <td className="px-4 py-3">{b.max_students || b.MaxStudents || b.students}</td>
+                            <td className="px-4 py-3"><span className="rounded-full bg-emerald-50 px-2 py-1 text-xs text-emerald-700">{b.status || b.Status}</span></td>
+                            <td className="px-4 py-3">
+                              <button 
+                                onClick={() => handleGetBatchDetails(courses[0]?.id, b.id)}
+                                className="text-indigo-600 hover:text-indigo-700 text-sm"
+                              >
+                                View
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="7" className="px-4 py-8 text-center text-slate-500">
+                            <p className="text-sm">No batches available</p>
                           </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>
-                <p className="mt-3 text-xs text-slate-500">Total 18 batches</p>
+                <p className="mt-3 text-xs text-slate-500">Total {batches.length} batches</p>
               </div>
             </div>
 
@@ -302,18 +348,18 @@ export default function ManageCompanyBatches() {
                   </div>
                 </div>
                 <div className="mt-4 grid gap-3">
-                  {demo.courses.map((c) => (
+                    {(courses.length ? courses : demo.courses).map((c) => (
                     <div key={c.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
                       <div className="flex items-start justify-between">
                         <div>
                           <p className="text-xs text-slate-500">{c.level}</p>
-                          <p className="mt-1 font-semibold text-slate-900">{c.title}</p>
+                          <p className="mt-1 font-semibold text-slate-900">{c.title || c.title}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm text-slate-700">{c.seats}</p>
+                          <p className="text-sm text-slate-700">{c.booked_seats ? `${c.booked_seats}/${c.total_seats}` : c.seats}</p>
                         </div>
                       </div>
-                      <p className="mt-2 text-xs text-slate-500">{c.dates}</p>
+                      <p className="mt-2 text-xs text-slate-500">{c.start_date ? new Date(c.start_date).toLocaleDateString() : c.dates}</p>
                     </div>
                   ))}
                 </div>

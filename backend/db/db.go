@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -93,29 +94,20 @@ func InitDB() error {
 		log.Printf("Failed to migrate models: %v", err)
 		return err
 	}
-	/*
-		defaultEmail := os.Getenv("default_user")
-		if defaultEmail == "" {
-			fmt.Errorf("Default user not set")
-		}
-		defaultPassword := os.Getenv("default_password")
-		var testUser models.User
-		if err := DB.Where("user_email = ?", defaultEmail).First(&testUser).Error; err != nil {
-			testUser = models.User{
-				Email:        defaultEmail,
-				PasswordHash: defaultPassword,
-				FirstName:    "Test",
-				LastName:     "User",
-			}
-			if createErr := DB.Create(&testUser).Error; createErr != nil {
-				log.Printf("failed to create default test user: %v", createErr)
-				return createErr
-			}
-			log.Printf("default test user created: %s", defaultEmail)
-		} else {
-			log.Printf("default test user already exists: %s", defaultEmail)
-		}
-	*/
+
+	// Ensure any old unique index on batches.course_id is removed so multiple batches per course are allowed.
+	if err := DB.Exec(`
+DO $$
+DECLARE r RECORD;
+BEGIN
+  FOR r IN SELECT indexname FROM pg_indexes WHERE tablename='batches' AND indexdef LIKE '%(course_id)%' LOOP
+    EXECUTE format('DROP INDEX IF EXISTS %I', r.indexname);
+  END LOOP;
+END$$;
+`).Error; err != nil {
+		log.Printf("Failed to drop unique index on batches.course_id: %v", err)
+		// not a fatal error; continue
+	}
 
 	log.Printf("models migration doneeee!!")
 	// Create default user if not exists
@@ -145,6 +137,158 @@ func InitDB() error {
 	} else {
 		log.Printf("Default user already exists: %s", defaultEmail)
 	}
+
+	// Seed data after migrations and basic user setup
+	if err := SeedData(); err != nil {
+		log.Printf("Warning: Seeding failed (non-fatal): %v", err)
+		// Continue even if seeding fails - it's not critical for DB init
+	}
+
 	log.Printf("DB CHALUUUUUUUUU !!!!!")
+	return nil
+}
+
+// SeedData creates RBAC roles/permissions and sample courses/batches per user.
+// This is separate from InitDB to keep concerns separated.
+func SeedData() error {
+	// Seed manage-company RBAC defaults so protected endpoints do not fail with 403 in a fresh DB.
+	adminRoleName := "company_admin"
+	var adminRole models.Role
+	if err := DB.Where("name = ?", adminRoleName).First(&adminRole).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			adminRole = models.Role{
+				ID:          uuid.New(),
+				Name:        adminRoleName,
+				Description: "Admin role for company management module",
+			}
+			if createErr := DB.Create(&adminRole).Error; createErr != nil {
+				log.Printf("Failed to create role %s: %v", adminRoleName, createErr)
+				return createErr
+			}
+		} else {
+			log.Printf("Failed to query role %s: %v", adminRoleName, err)
+			return err
+		}
+	}
+
+	permissionNames := []string{
+		"company.session.assign",
+		"company.session.read",
+		"company.batch.create",
+		"company.batch.read",
+	}
+
+	for _, permName := range permissionNames {
+		var perm models.Permission
+		if err := DB.Where("name = ?", permName).First(&perm).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				perm = models.Permission{
+					ID:          uuid.New(),
+					Name:        permName,
+					Description: "Auto-seeded permission for manage company module",
+				}
+				if createErr := DB.Create(&perm).Error; createErr != nil {
+					log.Printf("Failed to create permission %s: %v", permName, createErr)
+					return createErr
+				}
+			} else {
+				log.Printf("Failed to query permission %s: %v", permName, err)
+				return err
+			}
+		}
+
+		var rolePerm models.RolePermission
+		if err := DB.Where("role_id = ? AND permission_id = ?", adminRole.ID, perm.ID).First(&rolePerm).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				rolePerm = models.RolePermission{
+					ID:           uuid.New(),
+					RoleID:       adminRole.ID,
+					PermissionID: perm.ID,
+				}
+				if createErr := DB.Create(&rolePerm).Error; createErr != nil {
+					log.Printf("Failed to create role_permission for %s: %v", permName, createErr)
+					return createErr
+				}
+			} else {
+				log.Printf("Failed to query role_permission for %s: %v", permName, err)
+				return err
+			}
+		}
+	}
+
+	if err := DB.Model(&models.User{}).
+		Where("role_id = ? OR role_id IS NULL", uuid.Nil).
+		Update("role_id", adminRole.ID).Error; err != nil {
+		log.Printf("Failed to assign default role to users without role: %v", err)
+		return err
+	}
+
+	// Seed sample courses and batches per user so frontend can show account-specific data.
+	var users []models.User
+	if err := DB.Find(&users).Error; err != nil {
+		log.Printf("Failed to load users for seeding courses: %v", err)
+		return err
+	}
+	for i, u := range users {
+		// create 1-2 courses per user depending on index
+		numCourses := 1
+		if i%2 == 0 {
+			numCourses = 2
+		}
+		for j := 0; j < numCourses; j++ {
+			title := "Course - " + u.Email + " - " + strconv.Itoa(j+1)
+			var existingCourse models.Course
+			if err := DB.Where("title = ? AND created_by = ?", title, u.ID).First(&existingCourse).Error; err != nil {
+				if err == gorm.ErrRecordNotFound {
+					start := time.Now().AddDate(0, j, 0)
+					end := start.AddDate(0, 3, 0)
+					c := models.Course{
+						ID:         uuid.New(),
+						Title:      title,
+						Level:      "Beginner",
+						Status:     "published",
+						TotalSeats: 30 + j*10,
+						StartDate:  &start,
+						EndDate:    &end,
+						CreatedBy:  u.ID,
+					}
+					if err := DB.Create(&c).Error; err != nil {
+						log.Printf("Failed to create course %s: %v", title, err)
+						continue
+					}
+					existingCourse = c
+				} else {
+					// other error
+					log.Printf("Failed checking course %s: %v", title, err)
+					continue
+				}
+			}
+			// create a batch for this course if not exists
+			var existingBatch models.Batch
+			if err := DB.Where("course_id = ?", existingCourse.ID).First(&existingBatch).Error; err != nil {
+				if err == gorm.ErrRecordNotFound {
+					start := time.Now().AddDate(0, j, 0)
+					end := start.AddDate(0, 3, 0)
+					b := models.Batch{
+						ID:          uuid.New(),
+						CourseID:    existingCourse.ID,
+						BatchName:   existingCourse.Title + " - Batch 1",
+						StartDate:   &start,
+						EndDate:     &end,
+						MaxStudents: 30,
+						Status:      "active",
+					}
+					if err := DB.Create(&b).Error; err != nil {
+						log.Printf("Failed to create batch for course %s: %v", existingCourse.Title, err)
+						continue
+					}
+				} else {
+					log.Printf("Failed checking batch for course %s: %v", existingCourse.Title, err)
+					continue
+				}
+			}
+		}
+	}
+
 	return nil
 }

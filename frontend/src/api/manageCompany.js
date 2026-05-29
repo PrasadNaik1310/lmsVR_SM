@@ -18,6 +18,14 @@ export async function listBatchesByCourse(courseId, params = {}, token) {
   return response.data;
 }
 
+export async function listCoursesForUser(params = {}, token) {
+  const response = await http.get(`/company/courses`, {
+    ...withAuth(token),
+    params,
+  });
+  return response.data;
+}
+
 export async function createBatchForCourse(courseId, payload, token) {
   const response = await http.post(`/company/courses/${courseId}/batches`, payload, withAuth(token));
   return response.data;

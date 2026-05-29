@@ -98,6 +98,43 @@ func ListCoursesBySession(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"courses": courses, "page": page, "size": size, "total": total})
 }
 
+func ListCoursesForUser(c *gin.Context) {
+	userIDAny, ok := c.Get("user_id")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		return
+	}
+	uid, ok := userIDAny.(uuid.UUID)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user id type in context"})
+		return
+	}
+
+	page := 1
+	size := 20
+	if p := c.Query("page"); p != "" {
+		if parsed, err := strconv.Atoi(p); err == nil && parsed > 0 {
+			page = parsed
+		}
+	}
+	if s := c.Query("size"); s != "" {
+		if parsed, err := strconv.Atoi(s); err == nil && parsed > 0 {
+			size = parsed
+		}
+	}
+
+	var courses []models.Course
+	query := db.DB.Model(&models.Course{}).Where("created_by = ?", uid)
+	var total int64
+	query.Count(&total)
+	query = query.Offset((page - 1) * size).Limit(size)
+	if err := query.Find(&courses).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch courses for user"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"courses": courses, "page": page, "size": size, "total": total})
+}
+
 type createBatchRequest struct {
 	BatchName   string `json:"batch_name" binding:"required"`
 	StartDate   string `json:"start_date" binding:"required"`
@@ -146,14 +183,13 @@ func CreateBatchForCourse(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "course not found"})
 		return
 	}
-
-	// uniqueness: one batch per course
-	var existing models.Batch
-	if err := db.DB.Where("course_id = ?", courseID).First(&existing).Error; err == nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "a batch already exists for this course"})
-		return
-	}
-
+	/*
+	   var existing models.Batch
+	   	if err := db.DB.Where("course_id = ?", courseID).First(&existing).Error; err == nil {
+	   		c.JSON(http.StatusConflict, gin.H{"error": "a batch already exists for this course"})
+	   		return
+	   	}
+	*/
 	batch := models.Batch{
 		ID:          uuid.New(),
 		CourseID:    courseID,

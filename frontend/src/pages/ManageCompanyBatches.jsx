@@ -37,9 +37,19 @@ export default function ManageCompanyBatches() {
   const navigate = useNavigate();
   const [batches, setBatches] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [selectedCourseId, setSelectedCourseId] = useState("");
   const [sessionCourses, setSessionCourses] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showCreateBatchModal, setShowCreateBatchModal] = useState(false);
+  const [createBatchForm, setCreateBatchForm] = useState({
+    courseId: "",
+    batchName: "",
+    startDate: "",
+    endDate: "",
+    maxStudents: "",
+    status: "draft",
+  });
   const token = localStorage.getItem('auth_token');
 
   const handleLogout = () => {
@@ -56,6 +66,8 @@ export default function ManageCompanyBatches() {
         setCourses(data.courses || []);
         // Auto-load batches for first course
         if (data.courses && data.courses.length > 0) {
+          setSelectedCourseId(data.courses[0].id);
+          setCreateBatchForm((prev) => ({ ...prev, courseId: data.courses[0].id }));
           const courseData = await listBatchesByCourse(data.courses[0].id, { page: 1, size: 20 }, token);
           setBatches(courseData.batches || []);
         }
@@ -70,10 +82,15 @@ export default function ManageCompanyBatches() {
 
   // Fetch batches by course
   const handleFetchBatchesByCourse = async (courseId) => {
+    if (!courseId) {
+      setError('Please select a valid course.');
+      return;
+    }
     try {
       setLoading(true);
       const data = await listBatchesByCourse(courseId, { page: 1, size: 20 }, token);
       setBatches(data.batches || []);
+      setSelectedCourseId(courseId);
       setError(null);
     } catch (err) {
       setError('Failed to fetch batches: ' + err.message);
@@ -83,32 +100,48 @@ export default function ManageCompanyBatches() {
     }
   };
 
-  // Create new batch
-  const handleCreateBatch = async (courseId) => {
-    const batchName = prompt('Enter batch name:');
-    if (!batchName) return;
+  const openCreateBatchModal = (courseId) => {
+    setCreateBatchForm({
+      courseId: courseId || selectedCourseId || courses[0]?.id || "",
+      batchName: "",
+      startDate: "",
+      endDate: "",
+      maxStudents: "",
+      status: "draft",
+    });
+    setShowCreateBatchModal(true);
+    setError(null);
+  };
 
-    const startDate = prompt('Enter start date (YYYY-MM-DD):');
-    if (!startDate) return;
+  const closeCreateBatchModal = () => {
+    setShowCreateBatchModal(false);
+  };
 
-    const endDate = prompt('Enter end date (YYYY-MM-DD):');
-    if (!endDate) return;
+  const handleCreateBatchInputChange = (e) => {
+    const { name, value } = e.target;
+    setCreateBatchForm((prev) => ({ ...prev, [name]: value }));
+  };
 
-    const maxStudents = prompt('Enter max students:');
-    if (!maxStudents) return;
+  // Create new batch from modal form
+  const handleCreateBatch = async (e) => {
+    e.preventDefault();
+    if (!createBatchForm.courseId || !createBatchForm.batchName || !createBatchForm.startDate || !createBatchForm.endDate || !createBatchForm.maxStudents) {
+      setError('Please fill all batch form fields.');
+      return;
+    }
 
     try {
       setLoading(true);
       const payload = {
-        batch_name: batchName,
-        start_date: startDate,
-        end_date: endDate,
-        max_students: parseInt(maxStudents),
-        status: 'draft',
+        batch_name: createBatchForm.batchName,
+        start_date: createBatchForm.startDate,
+        end_date: createBatchForm.endDate,
+        max_students: parseInt(createBatchForm.maxStudents, 10),
+        status: createBatchForm.status || 'draft',
       };
-      const data = await createBatchForCourse(courseId, payload, token);
-      alert('Batch created successfully');
-      setBatches([...batches, data]);
+      await createBatchForCourse(createBatchForm.courseId, payload, token);
+      await handleFetchBatchesByCourse(createBatchForm.courseId);
+      closeCreateBatchModal();
       setError(null);
     } catch (err) {
       setError('Failed to create batch: ' + err.message);
@@ -278,13 +311,13 @@ export default function ManageCompanyBatches() {
                   <h3 className="text-sm font-semibold text-slate-900">Batches</h3>
                   <div className="flex items-center gap-3">
                     <a 
-                      onClick={() => handleFetchBatchesByCourse(courses[0]?.id || demo.courses[0]?.id)}
+                      onClick={() => handleFetchBatchesByCourse(selectedCourseId || courses[0]?.id)}
                       className="text-sm text-indigo-600 cursor-pointer"
                     >
                       View all
                     </a>
                     <button 
-                      onClick={() => handleCreateBatch(courses[0]?.id || demo.courses[0]?.id)}
+                      onClick={() => openCreateBatchModal(selectedCourseId || courses[0]?.id)}
                       className="rounded bg-white px-3 py-1 text-sm border border-slate-200"
                     >
                       + Add Batch
@@ -316,7 +349,7 @@ export default function ManageCompanyBatches() {
                             <td className="px-4 py-3"><span className="rounded-full bg-emerald-50 px-2 py-1 text-xs text-emerald-700">{b.status || b.Status}</span></td>
                             <td className="px-4 py-3">
                               <button 
-                                onClick={() => handleGetBatchDetails(courses[0]?.id, b.id)}
+                                onClick={() => handleGetBatchDetails(b.course_id || selectedCourseId, b.id || b.ID)}
                                 className="text-indigo-600 hover:text-indigo-700 text-sm"
                               >
                                 View
@@ -403,6 +436,126 @@ export default function ManageCompanyBatches() {
           </section>
         </main>
       </div>
+
+      {showCreateBatchModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-slate-900">Create Batch</h3>
+              <button
+                type="button"
+                onClick={closeCreateBatchModal}
+                className="rounded px-2 py-1 text-slate-500 hover:bg-slate-100"
+              >
+                x
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateBatch} className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Course</label>
+                <select
+                  name="courseId"
+                  value={createBatchForm.courseId}
+                  onChange={handleCreateBatchInputChange}
+                  className="w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                  required
+                >
+                  <option value="">Select course</option>
+                  {courses.map((course, index) => (
+                    <option key={course.id || course.ID || `course-option-${index}`} value={course.id || course.ID}>
+                      {course.title || course.Title || `Course ${index + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Batch Name</label>
+                <input
+                  type="text"
+                  name="batchName"
+                  value={createBatchForm.batchName}
+                  onChange={handleCreateBatchInputChange}
+                  className="w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                  placeholder="e.g. Batch - Fall 2026"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Start Date</label>
+                  <input
+                    type="date"
+                    name="startDate"
+                    value={createBatchForm.startDate}
+                    onChange={handleCreateBatchInputChange}
+                    className="w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">End Date</label>
+                  <input
+                    type="date"
+                    name="endDate"
+                    value={createBatchForm.endDate}
+                    onChange={handleCreateBatchInputChange}
+                    className="w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Max Students</label>
+                <input
+                  type="number"
+                  name="maxStudents"
+                  min="1"
+                  value={createBatchForm.maxStudents}
+                  onChange={handleCreateBatchInputChange}
+                  className="w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                  placeholder="e.g. 40"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Status</label>
+                <select
+                  name="status"
+                  value={createBatchForm.status}
+                  onChange={handleCreateBatchInputChange}
+                  className="w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                >
+                  <option value="draft">Draft</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={closeCreateBatchModal}
+                  className="rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700 disabled:opacity-50"
+                  disabled={loading || courses.length === 0}
+                >
+                  {loading ? 'Creating...' : 'Create Batch'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

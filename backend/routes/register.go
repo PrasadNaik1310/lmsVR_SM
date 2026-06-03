@@ -10,6 +10,7 @@ func RegisterRoutes(r *gin.Engine) {
 	{
 		registerAuthRoutes(api)
 		registerCompanyRoutes(api)
+		RegisterAdmissionRoutes(api)
 	}
 }
 

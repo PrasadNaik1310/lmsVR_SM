@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/PrasadNaik1310/LMSVR_SM/models"
+	"github.com/PrasadNaik1310/LMSVR_SM/services"
 	"github.com/google/uuid"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -113,16 +114,22 @@ END$$;
 	// Create default user if not exists
 	defaultEmail := "1@2.com"
 	defaultPassword := "123"
+	hashedDefaultPassword, err := services.HashPassword(defaultPassword)
+	if err != nil {
+		log.Printf("Failed to hash default user password: %v", err)
+		return err
+	}
 	var user models.User
 	err = DB.Where("email = ?", defaultEmail).First(&user).Error
 	if err != nil {
 		if err.Error() == "record not found" || err == gorm.ErrRecordNotFound {
 			user = models.User{
-				ID:           uuid.New(),
-				FirstName:    "Default",
-				LastName:     "User",
-				Email:        defaultEmail,
-				PasswordHash: defaultPassword, // In production, hash this!
+				ID:        uuid.New(),
+				FirstName: "Default",
+				LastName:  "User",
+				Email:     defaultEmail,
+				//PasswordHash: defaultPassword, // In production, hash this!
+				PasswordHash: hashedDefaultPassword,
 				IsActive:     true,
 			}
 			if createErr := DB.Create(&user).Error; createErr != nil {

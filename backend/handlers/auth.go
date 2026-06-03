@@ -9,6 +9,7 @@ import (
 
 	"github.com/PrasadNaik1310/LMSVR_SM/db"
 	"github.com/PrasadNaik1310/LMSVR_SM/models"
+	"github.com/PrasadNaik1310/LMSVR_SM/services"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -39,7 +40,7 @@ func Login(c *gin.Context) {
 
 	}
 
-	if loginUser.PasswordHash != user.Password {
+	if !services.CheckPasswordHash(user.Password, loginUser.PasswordHash) {
 		log.Printf("Invalid password for user %s", user.UserEmail)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return

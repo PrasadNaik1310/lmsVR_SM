@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/PrasadNaik1310/LMSVR_SM/services"
 	"github.com/google/uuid"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -29,7 +30,7 @@ func DBInsert() {
 			FirstName:    "Prasad",
 			LastName:     "Naik",
 			Email:        "prasad@lms.com",
-			PasswordHash: "prasad",
+			PasswordHash: mustHashPassword("prasad"),
 			IsActive:     true,
 			CreatedAt:    time.Now(),
 			UpdatedAt:    time.Now(),
@@ -40,7 +41,7 @@ func DBInsert() {
 			FirstName:    "User2",
 			LastName:     "2user",
 			Email:        "user2@lms.com",
-			PasswordHash: "password2",
+			PasswordHash: mustHashPassword("password2"),
 			IsActive:     true,
 			CreatedAt:    time.Now(),
 			UpdatedAt:    time.Now(),
@@ -51,7 +52,7 @@ func DBInsert() {
 			FirstName:    "User3",
 			LastName:     "3user",
 			Email:        "user3@lms.com",
-			PasswordHash: "password3",
+			PasswordHash: mustHashPassword("password3"),
 			IsActive:     true,
 			CreatedAt:    time.Now(),
 			UpdatedAt:    time.Now(),
@@ -74,6 +75,14 @@ func DBInsert() {
 			log.Printf("Error checking user %s: %v", user.Email, err)
 		}
 	}
+}
+
+func mustHashPassword(password string) string {
+	hash, err := services.HashPassword(password)
+	if err != nil {
+		log.Fatalf("failed to hash seed password: %v", err)
+	}
+	return hash
 }
 
 func main() {

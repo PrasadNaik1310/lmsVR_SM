@@ -1,0 +1,49 @@
+API Routes
+
+Base URL: http://localhost:8080
+Common prefix: /lms
+
+Auth
+- POST  http://localhost:8080/lms/auth/login
+
+Health
+- GET   http://localhost:8080/health
+
+Company
+- PUT   http://localhost:8080/lms/company/sessions/:session_id/courses/:course_id/assign
+	- Permission: company.session.assign
+- GET   http://localhost:8080/lms/company/sessions/:session_id/courses
+	- Permission: company.session.read
+- GET   http://localhost:8080/lms/company/courses
+	- Permission: company.batch.read
+- GET   http://localhost:8080/lms/company/courses/:course_id/batches
+	- Permission: company.batch.read
+- POST  http://localhost:8080/lms/company/courses/:course_id/batches
+	- Permission: company.batch.create
+- GET   http://localhost:8080/lms/company/courses/:course_id/batches/:batch_id
+	- Permission: company.batch.read
+
+Admissions
+- POST  http://localhost:8080/lms/admissions/enquiries
+	- Permission: admission.enquiry.create
+- GET   http://localhost:8080/lms/admissions/enquiries
+	- Permission: admission.enquiry.read
+- GET   http://localhost:8080/lms/admissions/enquiries/:id
+	- Permission: admission.enquiry.read
+- PATCH http://localhost:8080/lms/admissions/enquiries/:id/status
+	- Permission: admission.enquiry.update
+- POST  http://localhost:8080/lms/admissions/applications
+	- Permission: admission.application.create
+- GET   http://localhost:8080/lms/admissions/applications
+	- Permission: admission.application.read
+- GET   http://localhost:8080/lms/admissions/applications/:id
+	- Permission: admission.application.read
+- PATCH http://localhost:8080/lms/admissions/applications/:id/approve
+	- Permission: admission.application.approve
+- PATCH http://localhost:8080/lms/admissions/applications/:id/reject
+	- Permission: admission.application.reject
+
+Notes:
+- All routes are registered from `backend/routes/register.go`.
+- Auth-protected routes use JWT middleware and route-level permission checks.
+- Passwords are stored hashed in the database; login verifies them with bcrypt.

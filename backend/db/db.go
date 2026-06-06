@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/PrasadNaik1310/LMSVR_SM/models"
+	"github.com/PrasadNaik1310/LMSVR_SM/seed"
 	"github.com/PrasadNaik1310/LMSVR_SM/services"
 	"github.com/google/uuid"
 	"gorm.io/driver/postgres"
@@ -150,6 +151,13 @@ END$$;
 		log.Printf("Warning: Seeding failed (non-fatal): %v", err)
 		// Continue even if seeding fails - it's not critical for DB init
 	}
+	if os.Getenv("APP_ENV") == "seeding" {
+		log.Println("+++++++++++=================+++++++++====+++++++++")
+		log.Println("Starting seeding data for applications and enquiry")
+		if err := seed.MigrateAndSeed(DB); err != nil {
+			log.Fatalf("Failed at data migration for applicationa and enquiry")
+		}
+	}
 
 	log.Printf("DB CHALUUUUUUUUU !!!!!")
 	return nil
@@ -228,6 +236,74 @@ func SeedData() error {
 		Update("role_id", adminRole.ID).Error; err != nil {
 		log.Printf("Failed to assign default role to users without role: %v", err)
 		return err
+	}
+
+	// Seed admission RBAC defaults
+	admissionRoleName := "admission_admin"
+	var admissionRole models.Role
+	if err := DB.Where("name = ?", admissionRoleName).First(&admissionRole).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			admissionRole = models.Role{
+				ID:          uuid.New(),
+				Name:        admissionRoleName,
+				Description: "Admin role for admission module",
+			}
+			if createErr := DB.Create(&admissionRole).Error; createErr != nil {
+				log.Printf("Failed to create role %s: %v", admissionRoleName, createErr)
+				return createErr
+			}
+		} else {
+			log.Printf("Failed to query role %s: %v", admissionRoleName, err)
+			return err
+		}
+	}
+
+	admissionPermissions := []string{
+		"admission.enquiry.create",
+		"admission.enquiry.read",
+		"admission.enquiry.update",
+		"admission.application.create",
+		"admission.application.read",
+		"admission.application.approve",
+		"admission.application.reject",
+	}
+
+	for _, permName := range admissionPermissions {
+		var perm models.Permission
+		if err := DB.Where("name = ?", permName).First(&perm).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				perm = models.Permission{
+					ID:          uuid.New(),
+					Name:        permName,
+					Description: "Auto-seeded permission for admission module",
+				}
+				if createErr := DB.Create(&perm).Error; createErr != nil {
+					log.Printf("Failed to create permission %s: %v", permName, createErr)
+					return createErr
+				}
+			} else {
+				log.Printf("Failed to query permission %s: %v", permName, err)
+				return err
+			}
+		}
+
+		var rolePerm models.RolePermission
+		if err := DB.Where("role_id = ? AND permission_id = ?", admissionRole.ID, perm.ID).First(&rolePerm).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				rolePerm = models.RolePermission{
+					ID:           uuid.New(),
+					RoleID:       admissionRole.ID,
+					PermissionID: perm.ID,
+				}
+				if createErr := DB.Create(&rolePerm).Error; createErr != nil {
+					log.Printf("Failed to create role_permission for %s: %v", permName, createErr)
+					return createErr
+				}
+			} else {
+				log.Printf("Failed to query role_permission for %s: %v", permName, err)
+				return err
+			}
+		}
 	}
 
 	// Seed sample courses and batches per user so frontend can show account-specific data.

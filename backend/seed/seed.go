@@ -1,6 +1,7 @@
-package main
+package seed
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -85,6 +86,55 @@ func mustHashPassword(password string) string {
 	return hash
 }
 
+func Seed(db *gorm.DB) error {
+	if err := seedEnquiries(db); err != nil {
+		return fmt.Errorf("Seeding enquires :%w", err)
+	}
+	log.Println("[seeder]: Seeding Enquires complete !!!")
+	log.Println("Trying applications!!!")
+	if err := seedApplications(db); err != nil {
+		return fmt.Errorf("Seeding applications :%w", err)
+	}
+	log.Println("[seeder]:Seeding Applications complete !!")
+	return nil
+
+}
+func seedEnquiries(db *gorm.DB) error {
+	for _, enquiry := range EnquirySeeds {
+		result := db.Where("id = ?", enquiry.ID).FirstOrCreate(&models.Enquiry{}, enquiry)
+		if result.Error != nil {
+			return fmt.Errorf("enquiry %s: %w", enquiry.ID, result.Error)
+		}
+		if result.RowsAffected > 0 {
+			log.Printf("[seeder] created enquiry: %s (%s)", enquiry.FullName, enquiry.ID)
+		} else {
+			log.Printf("[seeder] skipped enquiry (already exists): %s", enquiry.ID)
+		}
+	}
+	return nil
+}
+
+func seedApplications(db *gorm.DB) error {
+	for _, app := range ApplicationSeeds {
+		result := db.Where("id = ?", app.ID).FirstOrCreate(&models.Application{}, app)
+		if result.Error != nil {
+			return fmt.Errorf("application %s: %w", app.ID, result.Error)
+		}
+		if result.RowsAffected > 0 {
+			log.Printf("[seeder] created application: %s (enquiry: %s)", app.ID, app.EnquiryID)
+		} else {
+			log.Printf("[seeder] skipped application (already exists): %s", app.ID)
+		}
+	}
+	return nil
+}
+func MigrateAndSeed(db *gorm.DB) error {
+	if err := db.AutoMigrate(&models.Enquiry{}, &models.Application{}); err != nil {
+		return fmt.Errorf("auto-migrate: %w", err)
+	}
+	return Seed(db)
+}
 func main() {
 	DBInsert()
+
 }

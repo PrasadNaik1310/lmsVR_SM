@@ -203,7 +203,7 @@ export default function ManageCompanyBatches() {
       <div className="min-h-screen w-full bg-slate-50">
         <div className="flex">
           
-          <aside className="hidden w-64 shrink-0 border-r border-slate-100 bg-white lg:block">
+          {/*<aside className="hidden w-64 shrink-0 border-r border-slate-100 bg-white lg:block">
             
             <nav className="px-3 pb-6">
               <ul className="space-y-1 text-sm text-slate-700">
@@ -224,7 +224,7 @@ export default function ManageCompanyBatches() {
               </div>
             </nav>
           </aside>
-
+*/}
         <main className="flex-1 p-6">
           <header className="mb-6 flex items-center justify-between">
             <div>

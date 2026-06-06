@@ -1,3 +1,4 @@
+{/*}
 import { Link, NavLink, Outlet } from "react-router-dom";
 import AppLogo from "../components/AppLogo.jsx";
 
@@ -8,13 +9,7 @@ export default function AppLayout() {
         <header className="flex items-center justify-between border-b border-slate-200/70 px-6 py-4 sm:px-8">
           <Link className="flex items-center gap-3" to="/">
             <AppLogo />
-            {/*<div>
-              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-black-700">LMSVR SM</p>
-              
-            </div>
-            <button className="h-9 w-9 rounded-full bg-slate-200 text-center leading-9 ">
-
-            </button>*/}
+            
           </Link>
 
           
@@ -27,3 +22,4 @@ export default function AppLayout() {
     </div>
   );
 }
+*/}

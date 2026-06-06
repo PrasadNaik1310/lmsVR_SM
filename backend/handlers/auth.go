@@ -40,10 +40,20 @@ func Login(c *gin.Context) {
 
 	}
 
-	if !services.CheckPasswordHash(user.Password, loginUser.PasswordHash) {
+	matched, needsRehash := services.VerifyPassword(user.Password, loginUser.PasswordHash)
+	if !matched {
 		log.Printf("Invalid password for user %s", user.UserEmail)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
+	}
+	if needsRehash || !services.IsBcryptHash(loginUser.PasswordHash) {
+		if hashedPassword, err := services.HashPassword(user.Password); err == nil {
+			if err := db.DB.Model(&loginUser).Update("password_hash", hashedPassword).Error; err != nil {
+				log.Printf("failed to upgrade password hash for user %s: %v", user.UserEmail, err)
+			}
+		} else {
+			log.Printf("failed to hash password for user %s: %v", user.UserEmail, err)
+		}
 	}
 
 	jwtSecret := os.Getenv("JWT_SECRET")

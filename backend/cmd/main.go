@@ -54,6 +54,12 @@ func main() {
 		log.Println("Port not found ")
 		port = "8080"
 	}
+	/*	if os.Getenv("APP_ENV") != "production" {
+		if err := seed.MigrateAndSeed(db); err != nil {
+			log.Fatalf(err)
+			return
+		}
+	}*/
 	go func() {
 		srv := &http.Server{
 			Addr:    ":" + port,

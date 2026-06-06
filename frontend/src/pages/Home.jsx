@@ -37,7 +37,7 @@ export default function Home() {
       localStorage.setItem("auth_token", data.token);
       console.log("Login successful:", data);
       alert("Login successful!");
-      navigate("/company/batches");
+      navigate("/admissions");
     } catch (err) {
       setError(err.message || "Login failed. Please try again.");
     } finally {

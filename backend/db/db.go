@@ -172,7 +172,8 @@ func SeedData() error {
 	if err := DB.Where("name = ?", adminRoleName).First(&adminRole).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			adminRole = models.Role{
-				ID:          uuid.New(),
+				ID: uuid.New(),
+				//ID:          1,
 				Name:        adminRoleName,
 				Description: "Admin role for company management module",
 			}
@@ -191,6 +192,13 @@ func SeedData() error {
 		"company.session.read",
 		"company.batch.create",
 		"company.batch.read",
+		"admission.enquiry.create",
+		"admission.enquiry.read",
+		"admission.enquiry.update",
+		"admission.application.create",
+		"admission.application.read",
+		"admission.application.approve",
+		"admission.application.reject",
 	}
 
 	for _, permName := range permissionNames {
@@ -231,13 +239,13 @@ func SeedData() error {
 		}
 	}
 
+	zeroUUID := uuid.UUID{} // all zeros = same as uuid.Nil, but explicit
 	if err := DB.Model(&models.User{}).
-		Where("role_id = ? OR role_id IS NULL", uuid.Nil).
+		Where("role_id = ? OR role_id IS NULL", zeroUUID).
 		Update("role_id", adminRole.ID).Error; err != nil {
 		log.Printf("Failed to assign default role to users without role: %v", err)
 		return err
 	}
-
 	// Seed admission RBAC defaults
 	admissionRoleName := "admission_admin"
 	var admissionRole models.Role

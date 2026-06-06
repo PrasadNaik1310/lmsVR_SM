@@ -1,0 +1,26 @@
+27th may:-> Completed and submitted Manage company module , was accepted by the manager.
+
+6th june :->
+I was supposed to submit Admission module on 2nd june and i have not submitted it yet
+There are several bugs in the module .
+LOGOUT button does not work
+Role of the user is being stored as an ID and not string for some reason
+Admission enquires not being fetched in the portal
+ . Working to fix this errors.
+
+solution:-> I am thinking of making roleID as ID instead of a UUID . Will have to change user model and seeded data in the DB.
+            Not changing the json tag from role_id to role , to save the effort , will start replacing the tag is the lookup is successfull.
+            commenting admission.go line 392 to migrate, 
+            changing all instances of roleID from uuid to int in user.go
+            line 247 db.go
+            line 176
+            That would have been too much of work , and may not have been the correct solution
+
+            I found out that for RBAC , I had already written down permission in db.go and were not written for admission module 
+            Wrote down the permission strings for admission module . 
+
+            Then came across the issue of frontend receiving the data from backend but not populating int
+            Found out i was reading the wrong key in admissions.jsx , i was supposed to read enquiriesRes.enquiries whereas i was readind enquiriesRes.data same for applications
+
+            Now attempting to run with full RBAC activated/.
+            

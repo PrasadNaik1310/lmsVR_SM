@@ -20,8 +20,10 @@ export default function AdmissionsOverview() {
           admissionsApi.listEnquiries({ page: 1, size: 10 }, token),
           admissionsApi.listApplications({ page: 1, size: 10 }, token),
         ]);
-        setEnquiries(enquiriesRes.data || []);
-        setApplications(applicationsRes.data || []);
+        setEnquiries(enquiriesRes.enquiries|| []);
+        console.log(enquiriesRes)
+        setApplications(applicationsRes.applications || []);
+        console.log(applicationsRes)
         setError(null);
       } catch (err) {
         setError(err.message || 'Failed to load data');
@@ -161,7 +163,7 @@ export default function AdmissionsOverview() {
           </div>
 
           <aside className="space-y-4">
-            <div className="rounded-xl border border-slate-100 bg-white p-4">
+   {         /*<div className="rounded-xl border border-slate-100 bg-white p-4">
               <h3 className="text-sm font-semibold text-slate-900">Application Status</h3>
               <div className="mt-4 flex items-center justify-center">
                 <div className="h-36 w-36 rounded-full bg-slate-50 flex items-center justify-center">
@@ -172,7 +174,7 @@ export default function AdmissionsOverview() {
                 </div>
               </div>
             </div>
-
+*/}
             <div className="rounded-xl border border-slate-100 bg-white p-4">
               <h3 className="text-sm font-semibold text-slate-900">Quick Actions</h3>
               <div className="mt-3 grid gap-2">

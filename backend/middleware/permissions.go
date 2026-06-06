@@ -50,7 +50,7 @@ func RequirePermission(permission string) gin.HandlerFunc {
 			c.JSON(http.StatusForbidden, gin.H{"error": "User not authorised."})
 			c.Abort()
 			return
-		}
+		} // note uncomment in PROD. Important for RBAC...
 
 		c.Next()
 	}

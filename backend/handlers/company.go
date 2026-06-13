@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -29,6 +30,7 @@ func AssignCourseToSession(c *gin.Context) {
 	var session models.AcademicSession
 	if err := db.DB.Where("id = ?", sessionID).First(&session).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "academic session not found"})
+		log.Println("Course not founw ")
 		return
 	}
 	if !session.IsActive {
@@ -38,6 +40,7 @@ func AssignCourseToSession(c *gin.Context) {
 
 	var course models.Course
 	if err := db.DB.Where("id = ?", courseID).First(&course).Error; err != nil {
+		log.Println("Course Not found 1")
 		c.JSON(http.StatusNotFound, gin.H{"error": "course not found"})
 		return
 	}
@@ -181,6 +184,7 @@ func CreateBatchForCourse(c *gin.Context) {
 	var course models.Course
 	if err := db.DB.Where("id = ?", courseID).First(&course).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "course not found"})
+		log.Println("Course Not fonud ")
 		return
 	}
 	/*
@@ -231,6 +235,7 @@ func ListBatchesByCourse(c *gin.Context) {
 	var course models.Course
 	if err := db.DB.Where("id = ?", courseID).First(&course).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "course not found"})
+		log.Println("Course not fonud ")
 		return
 	}
 
@@ -270,6 +275,7 @@ func GetBatchDetails(c *gin.Context) {
 	var batch models.Batch
 	if err := db.DB.Where("id = ? AND course_id = ?", batchID, courseID).First(&batch).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "batch not found for given course"})
+		log.Println("Batch not found ")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"batch": batch})

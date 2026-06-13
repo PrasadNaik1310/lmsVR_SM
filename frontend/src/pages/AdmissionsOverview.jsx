@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import * as admissionsApi from "../api/admissions.js";
-
+import axios from "axios";
 // ── Modal backdrop ────────────────────────────────────────────────────────────
 function Modal({ open, onClose, title, children }) {
   useEffect(() => {
@@ -45,6 +45,114 @@ function Field({ label, error, children }) {
 
 const inputCls =
   "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition";
+
+// ── Row Action Menu ───────────────────────────────────────────────────────────
+function ApplicationActionMenu({ application, onActionComplete }) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const menuRef = useRef(null);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const handleAction = async (action) => {
+    setOpen(false);
+    setLoading(true);
+    const token = localStorage.getItem("auth_token");
+    
+    try {
+      
+      if (action === "approve") {
+        const res = await fetch(`http://localhost:8080/lms/admissions/applications/${application.id}/approve`, {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({application_id:application.id})
+          //body: application.id
+
+        });
+console.log("Request data:->  %s ",body);
+        /*axios.interceptors.request.use((res) => {
+  console.log("REQUEST");
+  console.log(res.method);
+  console.log(res.url);
+  console.log(res.data);
+
+  return config;
+});*/
+        if (!res.ok) throw new Error('Error returned ${res.status}');
+      } else {
+        const res = await fetch(`http://localhost:8080/lms/admissions/applications/${application.id}/reject`, {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({})
+        });
+        if (!res.ok) throw new Error("Error returned ${res.status}");
+      }
+      onActionComplete();
+      console.log("Action complete");
+    } catch (err) {
+      console.error(`Failed to ${action} application:`, err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isPending = application.application_status === "pending";
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        disabled={loading}
+        title="Actions"
+        className="h-7 w-7 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition "
+      >
+        {loading ? (
+          <span className="block h-3 w-3 rounded-full border-2 border-slate-300 border-t-indigo-500 animate-spin" />
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <circle cx="8" cy="3" r="1.25" />
+            <circle cx="8" cy="8" r="1.25" />
+            <circle cx="8" cy="13" r="1.25" />
+          </svg>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 z-40 mt-1 w-44 rounded-xl border border-slate-100 bg-white shadow-lg py-1 animate-fadeIn">
+          <button
+            onClick={() => handleAction("approve")}
+            /*disabled={!isPending}*/
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50 transition "
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="2 7 5.5 10.5 12 4" />
+            </svg>
+            Approve application
+          </button>
+          <button
+            onClick={() => handleAction("reject")}
+            /*disabled={!isPending}*/
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition "
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="3" x2="11" y2="11" />
+              <line x1="11" y1="3" x2="3" y2="11" />
+            </svg>
+            Reject application
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Create Enquiry Modal ──────────────────────────────────────────────────────
 function CreateEnquiryModal({ open, onClose, onSuccess }) {
@@ -132,7 +240,6 @@ function CreateApplicationModal({ open, onClose, onSuccess, enquiries }) {
     return e;
   };
 
-  // When an enquiry is selected, pre-fill the course
   const handleEnquiryChange = (id) => {
     set("enquiry_id", id);
     const enq = enquiries.find((e) => e.id === id);
@@ -238,7 +345,16 @@ export default function AdmissionsOverview() {
   };
 
   const statusColor = (status) => {
-    const map = { new: "bg-amber-50 text-amber-700", contacted: "bg-blue-50 text-blue-700", follow_up: "bg-purple-50 text-purple-700", converted: "bg-green-50 text-green-700", closed: "bg-slate-100 text-slate-500", approved: "bg-green-50 text-green-700", rejected: "bg-red-50 text-red-700" };
+    const map = {
+      new: "bg-amber-50 text-amber-700",
+      contacted: "bg-blue-50 text-blue-700",
+      follow_up: "bg-purple-50 text-purple-700",
+      converted: "bg-green-50 text-green-700",
+      closed: "bg-slate-100 text-slate-500",
+      pending: "bg-amber-50 text-amber-700",
+      approved: "bg-green-50 text-green-700",
+      rejected: "bg-red-50 text-red-700",
+    };
     return map[status] || "bg-slate-100 text-slate-600";
   };
 
@@ -343,10 +459,11 @@ export default function AdmissionsOverview() {
                     <table className="min-w-full text-left text-sm">
                       <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                         <tr>
-                          <th className="px-4 py-3">Enquiry ID</th>
+                          <th className="px-4 py-3">Application ID</th>
                           <th className="px-4 py-3">Course ID</th>
                           <th className="px-4 py-3">Status</th>
                           <th className="px-4 py-3">Submitted</th>
+                          <th className="px-4 py-3 w-10"></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -355,9 +472,17 @@ export default function AdmissionsOverview() {
                             <td className="px-4 py-3 text-slate-500 font-mono text-xs">{a.enquiry_id}</td>
                             <td className="px-4 py-3 text-slate-500 font-mono text-xs">{a.applied_course_id}</td>
                             <td className="px-4 py-3">
-                              <span className={`rounded-full px-2 py-1 text-xs font-medium ${statusColor(a.application_status)}`}>{a.application_status}</span>
+                              <span className={`rounded-full px-2 py-1 text-xs font-medium ${statusColor(a.application_status)}`}>
+                                {a.application_status}
+                              </span>
                             </td>
                             <td className="px-4 py-3 text-slate-500">{formatDate(a.submitted_at)}</td>
+                            <td className="px-4 py-3">
+                              <ApplicationActionMenu
+                                application={a}
+                                onActionComplete={loadData}
+                              />
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -399,6 +524,8 @@ export default function AdmissionsOverview() {
           to   { opacity: 1; transform: translateY(0) scale(1); }
         }
         .animate-fadeIn { animation: fadeIn 0.18s ease; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .animate-spin { animation: spin 0.7s linear infinite; }
       `}</style>
     </div>
   );

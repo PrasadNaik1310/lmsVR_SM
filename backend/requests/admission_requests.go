@@ -13,14 +13,15 @@ type UpdateEnquiryStatusRequest struct {
 }
 
 type CreateApplicationRequest struct {
-	EnquiryID      string `json:"enquiry_id" binding:"required,uuid"`
+	EnquiryID       string `json:"enquiry_id" binding:"required,uuid"`
 	AppliedCourseID string `json:"applied_course_id" binding:"required,uuid"`
 }
 
 type ApproveApplicationRequest struct {
-	TemporaryPassword string `json:"temporary_password"`
+	//TemporaryPassword string `json:"temporary_password"`
+	ApplicationID string `json:"application_id" binding:"required,uuid"`
 }
 
 type RejectApplicationRequest struct {
-	Remarks string `json:"remarks"`
+	//Remarks string `json:"remarks"`
 }

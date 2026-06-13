@@ -2,6 +2,7 @@ package handlers
 
 import (
 	//"database/sql"
+	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
@@ -35,6 +36,7 @@ func CreateEnquiry(c *gin.Context) {
 	var course models.Course
 	if err := db.DB.Where("id = ?", courseID).First(&course).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "course not found"})
+		log.Println("Course not exists ")
 		return
 	}
 
@@ -283,6 +285,7 @@ func GetApplication(c *gin.Context) {
 	var application models.Application
 	if err := db.DB.Where("id = ?", appID).First(&application).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "application not found"})
+		log.Println("Application Not found , Get application !!")
 		return
 	}
 
@@ -306,12 +309,14 @@ func ApproveApplication(c *gin.Context) {
 	appID, err := uuid.Parse(appIDStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid application id"})
+		log.Printf("Application ID %s invalid :(", appID)
 		return
 	}
 
 	var req requests.ApproveApplicationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error , request not bind ": err.Error()})
+		log.Printf("request format invalid , admission.go err dekh lee :-> %s", err)
 		return
 	}
 
@@ -322,19 +327,22 @@ func ApproveApplication(c *gin.Context) {
 	})*/
 	//tx := db.DB.BeginTx(c, nil)
 	tx := db.DB.Begin()
+	log.Printf("TX started for id %s", appID)
 	//rollback
 
 	// Fetch application
 	var application models.Application
 	if err := tx.Where("id = ?", appID).First(&application).Error; err != nil {
 		tx.Rollback()
-		c.JSON(http.StatusNotFound, gin.H{"error": "application not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "application not found , application nahi haiii ..."})
+		log.Println("Application nahi milaaa bitch!!")
 		return
 	}
 
-	if application.ApplicationStatus != "pending" {
+	if application.ApplicationStatus == "approved" {
 		tx.Rollback()
 		c.JSON(http.StatusBadRequest, gin.H{"error": "application is not in pending status"})
+		log.Println("Application pending hai hi nahii bc")
 		return
 	}
 
@@ -343,15 +351,17 @@ func ApproveApplication(c *gin.Context) {
 	if err := tx.Where("id = ?", application.EnquiryID).First(&enquiry).Error; err != nil {
 		tx.Rollback()
 		c.JSON(http.StatusNotFound, gin.H{"error": "associated enquiry not found"})
+		log.Println("Enquiry not found !!")
+
 		return
 	}
 
-	// Generate temporary password if not provided
+	/*// Generate temporary password if not provided
 	tempPassword := req.TemporaryPassword
 	if tempPassword == "" {
 		tempPassword = generateTemporaryPassword(12)
-	}
-	hashedPassword, err := services.HashPassword(tempPassword)
+	}*/
+	hashedPassword, err := services.HashPassword(generateTemporaryPassword(12))
 	if err != nil {
 		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to secure temporary password"})
@@ -401,18 +411,32 @@ func ApproveApplication(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user account"})
 		return
 	}
+	// geenrating Enrollement number logic
+	var enrollmentSeq int64
+
+	if err := tx.Raw(
+		"SELECT nextval('student_enrollment_seq')",
+	).Scan(&enrollmentSeq).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "failed to generate enrollment number",
+		})
+		return
+	}
+	studentID := uuid.New()
 
 	// Create student profile
 	student := models.Student{
-		ID:            uuid.New(),
-		UserID:        userID,
-		AdmissionDate: &now,
-		CreatedAt:     time.Now(),
+		ID:               studentID,
+		UserID:           userID,
+		EnrollmentNumber: fmt.Sprintf("%d %d", time.Now().Year(), enrollmentSeq),
+		AdmissionDate:    &now,
+		CreatedAt:        time.Now(),
 	}
 
 	if err := tx.Create(&student).Error; err != nil {
 		tx.Rollback()
-		log.Printf("Failed to create student profile: %v", err)
+		log.Printf("Failed to create student profile: %v , Rollback TX id :%v", err, tx)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create student profile"})
 		return
 	}
@@ -421,6 +445,7 @@ func ApproveApplication(c *gin.Context) {
 	if err := tx.Model(&application).Update("application_status", "approved").Error; err != nil {
 		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update application status"})
+		log.Printf("Failed to accept application %s", application)
 		return
 	}
 
@@ -440,13 +465,14 @@ func ApproveApplication(c *gin.Context) {
 
 	// TODO: Send welcome email (stubbed for now)
 	log.Printf("Welcome email would be sent to %s with temporary password", enquiry.Email)
+	log.Printf("Temp password %s", hashedPassword)
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"application": gin.H{
-			"id":                 application.ID,
-			"status":             "approved",
-			"temporary_password": tempPassword,
+			"id":     application.ID,
+			"status": "approved",
+			//"temporary_password": tempPassword,
 		},
 	})
 }
@@ -457,33 +483,39 @@ func RejectApplication(c *gin.Context) {
 	appID, err := uuid.Parse(appIDStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid application id"})
+		log.Printf("Application id %s not found ", appID)
 		return
 	}
 
 	var req requests.RejectApplicationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("Application id %s request not bind . Err %s ", appID, err)
 		return
 	}
 
 	var application models.Application
 	if err := db.DB.Where("id = ?", appID).First(&application).Error; err != nil {
+		log.Printf("Application not found !!")
 		c.JSON(http.StatusNotFound, gin.H{"error": "application not found"})
 		return
 	}
 
-	if application.ApplicationStatus != "pending" {
+	if application.ApplicationStatus == "reject" || application.ApplicationStatus == "approve " {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "application is not in pending status"})
+		log.Printf("Application %s is not pending", appID)
 		return
 	}
 
 	// Update application status and remarks
 	if err := db.DB.Model(&application).Updates(map[string]interface{}{
 		"application_status": "rejected",
-		"remarks":            req.Remarks,
+		//"remarks":            req.Remarks,
 	}).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to reject application"})
+		log.Printf("Failed to reject the application %s", application)
 		return
+
 	}
 
 	c.JSON(http.StatusOK, gin.H{

@@ -61,44 +61,56 @@ func InitDB() error {
 	sqlDB.SetMaxOpenConns(200)
 	sqlDB.SetMaxIdleConns(102)
 	sqlDB.SetConnMaxIdleTime(10 * time.Minute)
-	err = DB.AutoMigrate(
-		&models.Role{},
-		&models.Permission{},
-		&models.RolePermission{},
-		&models.User{},
-		&models.Student{},
-		&models.Teacher{},
-		&models.Enquiry{},
-		&models.Application{},
-		&models.AcademicSession{},
-		&models.Team{},
-		&models.TeamMember{},
-		&models.Course{},
-		&models.Batch{},
-		&models.BatchTeacher{},
-		&models.CourseModule{},
-		&models.Lesson{},
-		&models.LessonFile{},
-		&models.Enrollment{},
-		&models.Membership{},
-		&models.Payment{},
-		&models.LiveSession{},
-		&models.LiveSessionAttendance{},
-		&models.CoursePlanner{},
-		&models.CourseLog{},
-		&models.Announcement{},
-		&models.AnnouncementCourse{},
-		&models.LessonSubmission{},
-		&models.CourseInvite{},
-		&models.Notification{},
-	)
-	if err != nil {
-		log.Printf("Failed to migrate models: %v", err)
-		return err
-	}
+	if os.Getenv("run_migrations") == "true" {
+		log.Printf("Running migrations !!")
+		err = DB.AutoMigrate(
+			&models.Role{},
+			&models.Permission{},
+			&models.RolePermission{},
+			&models.User{},
+			&models.Student{},
+			&models.Teacher{},
+			&models.Enquiry{},
+			&models.Application{},
+			&models.AcademicSession{},
+			&models.Team{},
+			&models.TeamMember{},
+			&models.Course{},
+			&models.Batch{},
+			&models.BatchTeacher{},
+			&models.CourseModule{},
+			&models.Lesson{},
+			&models.LessonFile{},
+			&models.Enrollment{},
+			&models.Membership{},
+			&models.Payment{},
+			&models.LiveSession{},
+			&models.LiveSessionAttendance{},
+			&models.CoursePlanner{},
+			&models.CourseLog{},
+			&models.Announcement{},
+			&models.AnnouncementCourse{},
+			&models.LessonSubmission{},
+			&models.CourseInvite{},
+			&models.Notification{},
+		)
+		if err != nil {
+			log.Printf("Failed to migrate models: %v", err)
+			return err
+		}
 
-	// Ensure any old unique index on batches.course_id is removed so multiple batches per course are allowed.
-	if err := DB.Exec(`
+		//enrollement sequence if doesnot exists
+		if err := DB.Exec(`
+		CREATE SEQUENCE IF NOT EXISTS student_enrollment_seq
+		START WITH 1
+		INCREMENT BY 1;
+	`).Error; err != nil {
+			log.Printf("Failed to create student enrollment sequence: %v", err)
+			return err
+		}
+
+		// Ensure any old unique index on batches.course_id is removed so multiple batches per course are allowed.
+		if err := DB.Exec(`
 DO $$
 DECLARE r RECORD;
 BEGIN
@@ -107,11 +119,12 @@ BEGIN
   END LOOP;
 END$$;
 `).Error; err != nil {
-		log.Printf("Failed to drop unique index on batches.course_id: %v", err)
-		// not a fatal error; continue
-	}
+			log.Printf("Failed to drop unique index on batches.course_id: %v", err)
+			// not a fatal error; continue
+		}
 
-	log.Printf("models migration doneeee!!")
+		log.Printf("models migration doneeee!!")
+	}
 	// Create default user if not exists
 	defaultEmail := "1@2.com"
 	defaultPassword := "123"

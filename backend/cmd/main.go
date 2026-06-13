@@ -25,7 +25,7 @@ func main() {
 	r := gin.Default()
 	r.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*") // change in PROD
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "PUT,POST,OPTIONS,GET,DELETE")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "PUT,POST,OPTIONS,GET,DELETE,PATCH")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type,Authorization")
 		if c.Request.Method == "OPTIONS" {
 			log.Println("Recived preflight request !!")

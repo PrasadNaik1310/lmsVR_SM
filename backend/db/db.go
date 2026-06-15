@@ -24,7 +24,7 @@ func InitDB() error {
 	dsn := os.Getenv("db_url")
 	if dsn == "" {
 		log.Fatal("Could not get DB URL , INIT DB")
-		return nil
+		//	return nil
 	}
 	if strings.HasPrefix(dsn, "postgres://") {
 		if !strings.Contains(dsn, "connect_timeout") {
@@ -39,7 +39,7 @@ func InitDB() error {
 		}
 	} else if !strings.Contains(dsn, "connect_timeout") {
 		// DSN format (key=value pairs)
-		dsn += "&X connect_timeout=10"
+		dsn += "&connect_timeout=10"
 	}
 
 	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{

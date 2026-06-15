@@ -13,7 +13,7 @@ type Student struct {
 	EnrollmentNumber string     `gorm:"unique" json:"enrollment_number"`
 	DateOfBirth      *time.Time `json:"date_of_birth,omitempty"`
 	Address          string     `gorm:"type:text" json:"address"`
-	AdmissionDate    *time.Time `json:"admission_date,omitempty" gorm:"not null"`
+	AdmissionDate    time.Time  `json:"admission_date,omitempty" gorm:"not null"`
 	CreatedAt        time.Time  `gorm:"autoCreateTime" json:"created_at"`
 }
 

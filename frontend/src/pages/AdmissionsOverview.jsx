@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import * as admissionsApi from "../api/admissions.js";
 import axios from "axios";
+
 // ── Modal backdrop ────────────────────────────────────────────────────────────
 function Modal({ open, onClose, title, children }) {
   useEffect(() => {
@@ -16,7 +17,7 @@ function Modal({ open, onClose, title, children }) {
       style={{ background: "rgba(15,23,42,0.45)", backdropFilter: "blur(2px)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl p-6 mx-4 animate-fadeIn">
+      <div className="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl p-6 mx-4 animate-fadeIn" style={{ maxHeight: "90vh", overflowY: "auto" }}>
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-base font-semibold text-slate-900">{title}</h2>
           <button
@@ -52,7 +53,6 @@ function ApplicationActionMenu({ application, onActionComplete }) {
   const [loading, setLoading] = useState(false);
   const menuRef = useRef(null);
 
-  // Close on outside click
   useEffect(() => {
     if (!open) return;
     const handler = (e) => {
@@ -66,34 +66,22 @@ function ApplicationActionMenu({ application, onActionComplete }) {
     setOpen(false);
     setLoading(true);
     const token = localStorage.getItem("auth_token");
-    
+
     try {
-      
       if (action === "approve") {
         const res = await fetch(`http://localhost:8080/lms/admissions/applications/${application.id}/approve`, {
           method: "PATCH",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({application_id:application.id})
-          //body: application.id
-
+          body: JSON.stringify({ application_id: application.id }),
         });
-console.log("Request data:->  %s ",body);
-        /*axios.interceptors.request.use((res) => {
-  console.log("REQUEST");
-  console.log(res.method);
-  console.log(res.url);
-  console.log(res.data);
-
-  return config;
-});*/
-        if (!res.ok) throw new Error('Error returned ${res.status}');
+        if (!res.ok) throw new Error(`Error returned ${res.status}`);
       } else {
         const res = await fetch(`http://localhost:8080/lms/admissions/applications/${application.id}/reject`, {
           method: "PATCH",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify({})
+          body: JSON.stringify({}),
         });
-        if (!res.ok) throw new Error("Error returned ${res.status}");
+        if (!res.ok) throw new Error(`Error returned ${res.status}`);
       }
       onActionComplete();
       console.log("Action complete");
@@ -104,15 +92,13 @@ console.log("Request data:->  %s ",body);
     }
   };
 
-  const isPending = application.application_status === "pending";
-
   return (
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setOpen((v) => !v)}
         disabled={loading}
         title="Actions"
-        className="h-7 w-7 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition "
+        className="h-7 w-7 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
       >
         {loading ? (
           <span className="block h-3 w-3 rounded-full border-2 border-slate-300 border-t-indigo-500 animate-spin" />
@@ -129,8 +115,7 @@ console.log("Request data:->  %s ",body);
         <div className="absolute right-0 z-40 mt-1 w-44 rounded-xl border border-slate-100 bg-white shadow-lg py-1 animate-fadeIn">
           <button
             onClick={() => handleAction("approve")}
-            /*disabled={!isPending}*/
-            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50 transition "
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50 transition"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="2 7 5.5 10.5 12 4" />
@@ -139,8 +124,7 @@ console.log("Request data:->  %s ",body);
           </button>
           <button
             onClick={() => handleAction("reject")}
-            /*disabled={!isPending}*/
-            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition "
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="3" y1="3" x2="11" y2="11" />
@@ -151,6 +135,251 @@ console.log("Request data:->  %s ",body);
         </div>
       )}
     </div>
+  );
+}
+
+// ── Import CSV Modal ──────────────────────────────────────────────────────────
+function ImportCSVModal({ open, onClose, onSuccess }) {
+  const token = localStorage.getItem("auth_token");
+  const [rows, setRows] = useState([]);
+  const [dragging, setDragging] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [done, setDone] = useState(false);
+  const fileRef = useRef(null);
+
+  const REQUIRED_COLS = ["full_name", "email", "phone", "interested_course_id", "notes"];
+
+  const reset = () => {
+    setRows([]);
+    setImporting(false);
+    setProgress(0);
+    setDone(false);
+  };
+
+  const validateRow = (row) => {
+    const errors = [];
+    if (!row.full_name?.trim()) errors.push("Name required");
+    if (!row.email?.trim()) errors.push("Email required");
+    else if (!/\S+@\S+\.\S+/.test(row.email)) errors.push("Invalid email");
+    if (!row.interested_course_id?.trim()) errors.push("Course ID required");
+    return errors;
+  };
+
+  const splitCSVLine = (line) => {
+    const result = []; let cur = ""; let inQ = false;
+    for (const c of line) {
+      if (c === '"') { inQ = !inQ; }
+      else if (c === "," && !inQ) { result.push(cur); cur = ""; }
+      else { cur += c; }
+    }
+    result.push(cur);
+    return result;
+  };
+
+  const parseCSV = (text) => {
+    const lines = text.trim().split(/\r?\n/);
+    if (lines.length < 2) { alert("CSV has no data rows"); return; }
+    const headers = lines[0].split(",").map((h) => h.trim().toLowerCase().replace(/"/g, ""));
+    const colIdx = {};
+    REQUIRED_COLS.forEach((col) => { colIdx[col] = headers.indexOf(col); });
+    const parsed = lines.slice(1).map((line, i) => {
+      const cols = splitCSVLine(line);
+      const row = { _line: i + 2 };
+      REQUIRED_COLS.forEach((col) => { row[col] = colIdx[col] >= 0 ? (cols[colIdx[col]] || "").trim() : ""; });
+      row._errors = validateRow(row);
+      return row;
+    }).filter((r) => r.full_name || r.email);
+    setRows(parsed);
+  };
+
+  const handleFile = (file) => {
+    if (!file || !file.name.endsWith(".csv")) { alert("Please select a .csv file"); return; }
+    const reader = new FileReader();
+    reader.onload = (e) => parseCSV(e.target.result);
+    reader.readAsText(file);
+  };
+
+  const handleImport = async () => {
+    const valid = rows.filter((r) => r._errors.length === 0);
+    setImporting(true);
+    setProgress(0);
+    let completed = 0;
+    for (const row of valid) {
+      try {
+        await admissionsApi.createEnquiry(
+          {
+            full_name: row.full_name,
+            email: row.email,
+            phone: row.phone,
+            interested_course_id: row.interested_course_id,
+            notes: row.notes,
+          },
+          token
+        );
+      } catch (err) {
+        console.error("Failed to import row:", row._line, err);
+      }
+      completed++;
+      setProgress(Math.round((completed / valid.length) * 100));
+    }
+    setDone(true);
+    setImporting(false);
+    onSuccess();
+  };
+
+  const downloadTemplate = () => {
+    const csv =
+      "full_name,email,phone,interested_course_id,notes\n" +
+      "Arjun Mehta,arjun@example.com,+91-9876543210,course-uuid-here,Interested in weekend batch\n";
+    const a = document.createElement("a");
+    a.href = "data:text/csv," + encodeURIComponent(csv);
+    a.download = "enquiries_template.csv";
+    a.click();
+  };
+
+  const valid = rows.filter((r) => r._errors.length === 0);
+  const invalid = rows.filter((r) => r._errors.length > 0);
+
+  return (
+    <Modal open={open} onClose={() => { reset(); onClose(); }} title="Batch Import Enquiries">
+      {/* Drop zone */}
+      <div
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => { e.preventDefault(); setDragging(false); handleFile(e.dataTransfer.files[0]); }}
+        onClick={() => fileRef.current?.click()}
+        className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
+          dragging
+            ? "border-indigo-400 bg-indigo-50"
+            : "border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50"
+        }`}
+      >
+        <p className="text-sm font-medium text-slate-700">
+          Drop your CSV file here or <span className="text-indigo-600">browse</span>
+        </p>
+        <p className="text-xs text-slate-400 mt-1">Supports .csv files up to 5 MB</p>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".csv"
+          className="hidden"
+          onChange={(e) => handleFile(e.target.files[0])}
+        />
+      </div>
+
+      {/* Template hint */}
+      <div className="mt-3 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 text-xs text-blue-700">
+        Expected columns:{" "}
+        <code className="bg-blue-100 px-1 rounded font-mono">full_name</code>,{" "}
+        <code className="bg-blue-100 px-1 rounded font-mono">email</code>,{" "}
+        <code className="bg-blue-100 px-1 rounded font-mono">phone</code>,{" "}
+        <code className="bg-blue-100 px-1 rounded font-mono">interested_course_id</code>,{" "}
+        <code className="bg-blue-100 px-1 rounded font-mono">notes</code>
+        {" · "}
+        <button
+          onClick={(e) => { e.stopPropagation(); downloadTemplate(); }}
+          className="underline text-blue-600 cursor-pointer bg-transparent border-none p-0"
+        >
+          Download template
+        </button>
+      </div>
+
+      {/* Preview table */}
+      {rows.length > 0 && (
+        <div className="mt-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Preview</span>
+            <span className="text-xs text-slate-400">{rows.length} rows parsed</span>
+          </div>
+          <div className="rounded-lg border border-slate-200" style={{ maxHeight: "320px", overflowY: "auto" }}>
+            <table className="min-w-full text-xs text-left">
+              <thead className="bg-slate-50 sticky top-0 z-10">
+                <tr>
+                  <th className="px-3 py-2 text-slate-500 font-semibold">#</th>
+                  <th className="px-3 py-2 text-slate-500 font-semibold">Name</th>
+                  <th className="px-3 py-2 text-slate-500 font-semibold">Email</th>
+                  <th className="px-3 py-2 text-slate-500 font-semibold">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, i) => (
+                  <tr key={i} className="border-t border-slate-100 hover:bg-slate-50">
+                    <td className="px-3 py-2 text-slate-400">{row._line}</td>
+                    <td className="px-3 py-2 text-slate-700">{row.full_name || <span className="text-red-400">—</span>}</td>
+                    <td className="px-3 py-2 text-slate-500">{row.email || <span className="text-red-400">—</span>}</td>
+                    <td className="px-3 py-2">
+                      {row._errors.length === 0 ? (
+                        <span className="rounded-full bg-green-50 text-green-700 px-2 py-0.5 text-xs font-medium">✓ Valid</span>
+                      ) : (
+                        <span
+                          className="rounded-full bg-red-50 text-red-600 px-2 py-0.5 text-xs font-medium"
+                          title={row._errors.join(", ")}
+                        >
+                          ✕ {row._errors[0]}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Summary cards */}
+          <div className="grid grid-cols-3 gap-2 mt-3">
+            <div className="rounded-lg bg-slate-50 border border-slate-200 p-2 text-center">
+              <p className="text-lg font-semibold text-slate-800">{rows.length}</p>
+              <p className="text-xs text-slate-500">Total rows</p>
+            </div>
+            <div className="rounded-lg bg-green-50 border border-green-100 p-2 text-center">
+              <p className="text-lg font-semibold text-green-700">{valid.length}</p>
+              <p className="text-xs text-green-600">Ready to import</p>
+            </div>
+            <div className="rounded-lg bg-red-50 border border-red-100 p-2 text-center">
+              <p className="text-lg font-semibold text-red-600">{invalid.length}</p>
+              <p className="text-xs text-red-500">Rows with errors</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Progress bar */}
+      {importing && (
+        <div className="mt-4">
+          <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-indigo-500 rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <p className="text-xs text-slate-500 mt-1 text-right">{progress}% complete</p>
+        </div>
+      )}
+
+      {done && (
+        <p className="mt-3 text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2">
+          ✓ {valid.length} enquiries imported successfully
+        </p>
+      )}
+
+      {/* Footer buttons */}
+      <div className="flex justify-end gap-2 mt-4">
+        <button
+          onClick={() => { reset(); onClose(); }}
+          className="rounded-lg px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 transition"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleImport}
+          disabled={valid.length === 0 || importing || done}
+          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition"
+        >
+          {importing ? `Importing… ${progress}%` : `Import ${valid.length} valid row${valid.length !== 1 ? "s" : ""}`}
+        </button>
+      </div>
+    </Modal>
   );
 }
 
@@ -309,6 +538,7 @@ export default function AdmissionsOverview() {
   const [error, setError] = useState(null);
   const [showEnquiryModal, setShowEnquiryModal] = useState(false);
   const [showApplicationModal, setShowApplicationModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const loadData = async () => {
     try {
@@ -372,12 +602,23 @@ export default function AdmissionsOverview() {
         onSuccess={loadData}
         enquiries={enquiries}
       />
+      <ImportCSVModal
+        open={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onSuccess={loadData}
+      />
 
       <div className="max-w-[1200px] mx-auto">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-slate-900">Admissions Overview</h1>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="rounded-lg border border-indigo-200 bg-white px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 transition"
+            >
+              ↑ Import CSV
+            </button>
             <button
               onClick={() => setShowEnquiryModal(true)}
               className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition"
@@ -510,6 +751,12 @@ export default function AdmissionsOverview() {
                     className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition text-left"
                   >
                     + Create Application
+                  </button>
+                  <button
+                    onClick={() => setShowImportModal(true)}
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition text-left"
+                  >
+                    ↑ Import CSV
                   </button>
                 </div>
               </div>

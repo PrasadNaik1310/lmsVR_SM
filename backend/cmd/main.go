@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/PrasadNaik1310/LMSVR_SM/db"
 	//"github.com/PrasadNaik1310/LMSVR_SM/handlers"
@@ -24,7 +26,12 @@ func main() {
 	}
 	r := gin.Default()
 	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*") // change in PROD
+		if os.Getenv("APP_ENV") == "dev" {
+			log.Printf("WARNING: Dev environment configured , ALLOWING ALL ORIGINS")
+			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		} else {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", os.Getenv("allowed_origin"))
+		}
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "PUT,POST,OPTIONS,GET,DELETE,PATCH")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type,Authorization")
 		if c.Request.Method == "OPTIONS" {
@@ -60,13 +67,14 @@ func main() {
 			return
 		}
 	}*/
+	srv := &http.Server{
+		Addr:    ":" + port,
+		Handler: r,
+	}
 	go func() {
-		srv := &http.Server{
-			Addr:    ":" + port,
-			Handler: r,
-		}
-		log.Println("attempt to start the server")
-		log.Println("Server bhiiii chaluuuuuuuuuuuuuuuuuu , READYY to serveeee ;)")
+
+		log.Println("Starting up server in gorountine: Complete!!")
+
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server not started %v", err)
 			return
@@ -76,5 +84,12 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	fmt.Println("Shutting DOWNWWW!!")
+	log.Println("signal for  gracefull shutdown: attempt started")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Println("CoudlNot perform graceful shutdown")
+		log.Fatalf("Server FORCED to shutdown : timelimit excedded for graceful shutdown")
+	}
+	fmt.Println("Signal for graceful shutdown : Completed!!")
 }

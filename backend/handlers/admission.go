@@ -238,8 +238,13 @@ func ListApplications(c *gin.Context) {
 		}
 	}
 	if s := c.Query("size"); s != "" {
+
 		if parsed, err := strconv.Atoi(s); err == nil && parsed > 0 {
+			if parsed > 100 {
+				size = 100
+			}
 			size = parsed
+
 		}
 	}
 
@@ -430,7 +435,7 @@ func ApproveApplication(c *gin.Context) {
 		ID:               studentID,
 		UserID:           userID,
 		EnrollmentNumber: fmt.Sprintf("%d %d", time.Now().Year(), enrollmentSeq),
-		AdmissionDate:    &now,
+		AdmissionDate:    time.Now(),
 		CreatedAt:        time.Now(),
 	}
 
@@ -501,7 +506,7 @@ func RejectApplication(c *gin.Context) {
 		return
 	}
 
-	if application.ApplicationStatus == "reject" || application.ApplicationStatus == "approve " {
+	if application.ApplicationStatus == "rejected" || application.ApplicationStatus == "approved" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "application is not in pending status"})
 		log.Printf("Application %s is not pending", appID)
 		return

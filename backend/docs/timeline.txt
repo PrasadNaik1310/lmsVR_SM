@@ -1,4 +1,29 @@
+18th may:-> 
+Started writing code for the project after finalizing the docs and architecture (present in docs folder)
+Wrote 1.dockerfile for test deployements.
+      2. jWT auth setup and seeded data in DB for testings
+      3. data models requried for the project .
+
+
+21th may :-> 
+Course assignment endpoints , RBAC setup , course validation rules 
+2. shifted routes main to routes folder (structural decision)
+
+
+24th may :->
+Added units tests to routes, handlers and middleware
+
 27th may:-> Completed and submitted Manage company module , was accepted by the manager.
+
+
+30th may :->
+Add a toast for new batch creation
+
+2. Fixed a 409 (DB CONFLICT)error while creating a batch . 
+
+3rd JUNE:->
+Handlers written for admission module . 
+Written new service for hashing the password.
 
 6th june :->
 I was supposed to submit Admission module on 2nd june and i have not submitted it yet
@@ -23,4 +48,34 @@ solution:-> I am thinking of making roleID as ID instead of a UUID . Will have t
             Found out i was reading the wrong key in admissions.jsx , i was supposed to read enquiriesRes.enquiries whereas i was readind enquiriesRes.data same for applications
 
             Now attempting to run with full RBAC activated/.
-            
+
+
+7th jun :->
+Create enquiry and application button 
+
+13th jun:->
+Added a run_migrations check or skip migraetion (env)
+[patch]: Add run_migrations check or else skip migrations
+2. Add enrollement_seq , to increment enrollement number before db insert
+[patch]: main.go : allow PATCH method
+[patch]: admission.go:
+add enrollemenet number to avoid 400 on approve request
+[patch]: profile.go :
+remove size of enrolementNumber constraint
+[patch]: admission_request.go :
+remove tempPassword field and add ApplicationId field
+[patch]: admissionOverview.jsx: add action menu for application acceptance/rejections.
+15th jun :->
+[feature]: AdmissionOverview.jsx
+ADD "import with csv " feature
+[PATCH]: profile.go:
+replace
+*time.Time with time.Time, to fix time.NOW() bug .
+[PATCH]: admission.go :
+Cap pagination wiht maximum cap to 100
+[PATCH]: db.go:
+remove return nil after fatalf
+[PATCH]:
+main.go:
+configure dev environment to allow * wildcard in ALLOW ALL ORIGIN.
+2. Implement Gracefull shutdown.

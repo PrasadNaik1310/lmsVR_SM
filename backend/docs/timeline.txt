@@ -79,3 +79,11 @@ remove return nil after fatalf
 main.go:
 configure dev environment to allow * wildcard in ALLOW ALL ORIGIN.
 2. Implement Gracefull shutdown.
+
+13th - 18th jun:->
+1. Fixed Critical bugs listed as above
+
+18th jun:->
+
+Membership Module starting . 
+1. Wrote down API contracts for the module .

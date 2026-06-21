@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/PrasadNaik1310/LMSVR_SM/db"
+	"github.com/PrasadNaik1310/LMSVR_SM/middleware"
+
 	//"github.com/PrasadNaik1310/LMSVR_SM/handlers"
 	"github.com/PrasadNaik1310/LMSVR_SM/routes"
 	"github.com/gin-gonic/gin"
@@ -25,6 +27,8 @@ func main() {
 
 	}
 	r := gin.Default()
+	r.Use(middleware.RecoveryMiddleware())
+
 	r.Use(func(c *gin.Context) {
 		if os.Getenv("APP_ENV") == "dev" {
 			log.Printf("WARNING: Dev environment configured , ALLOWING ALL ORIGINS")

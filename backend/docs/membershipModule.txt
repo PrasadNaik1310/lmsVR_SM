@@ -1,0 +1,480 @@
+# Membership Module - API Contract (Iteration 1)
+
+## Version
+
+**Version:** v1.0
+**Module:** Membership Management
+**Status:** Approved for Development
+
+---
+
+# Overview
+
+The Membership Module is responsible for managing student fee records, payment tracking, outstanding dues, grace periods, and membership status.
+
+Memberships are automatically created when a student is enrolled in a course.
+
+---
+
+# Scope
+
+## Included
+
+* Membership Dashboard
+* Membership Listing
+* Membership Details
+* Payment Recording
+* Payment History
+* Outstanding Fee Tracking
+* Grace Period Management
+
+## Excluded
+
+* Payment Gateway Integration
+* Refunds
+* Installment Plans
+* Invoice Generation
+* GST/Tax Handling
+* Financial Reports
+
+---
+
+# Permissions
+
+```text
+membership.read
+
+membership.dashboard.read
+
+payment.create
+payment.read
+```
+
+---
+
+# Business Rules
+
+## Membership Creation
+
+Memberships are automatically created during enrollment.
+
+```text
+Student Enrollment
+        ↓
+Membership Created
+```
+
+No manual membership creation endpoint is provided.
+
+---
+
+## Fee Assignment
+
+Course fees are entered during enrollment and stored in the membership record.
+
+Example:
+
+```text
+Student
+    ↓
+Enrollment
+    ↓
+Fee Assigned
+    ↓
+Membership Created
+```
+
+---
+
+## Membership Statuses
+
+```text
+ACTIVE
+GRACE_PERIOD
+EXPIRED
+```
+
+Status is automatically calculated by the system.
+
+Manual status updates are not allowed.
+
+---
+
+## Grace Period
+
+Grace period duration:
+
+```text
+30 Days
+```
+
+Grace expiry is calculated from the latest successful payment date.
+
+---
+
+## Payment Rules
+
+### Rule 1
+
+Payment amount must be greater than zero.
+
+### Rule 2
+
+Payment amount cannot exceed due amount.
+
+### Rule 3
+
+Every payment creates a new payment record.
+
+Existing payment records must never be modified.
+
+### Rule 4
+
+Membership status must be recalculated after every payment.
+
+---
+
+# Membership Status Logic
+
+## ACTIVE
+
+Condition:
+
+```text
+Due Amount = 0
+```
+
+Access:
+
+```text
+Attend Classes
+Access Lessons
+Submit Assignments
+Attendance Marked
+```
+
+---
+
+## GRACE_PERIOD
+
+Condition:
+
+```text
+Due Amount > 0
+Current Date <= Grace Expiry Date
+```
+
+Access:
+
+```text
+Attend Classes
+Access Lessons
+Submit Assignments
+Attendance Not Marked
+```
+
+---
+
+## EXPIRED
+
+Condition:
+
+```text
+Due Amount > 0
+Current Date > Grace Expiry Date
+```
+
+Access:
+
+```text
+No Access
+```
+
+---
+
+# API Endpoints
+
+---
+
+# 1. Membership Dashboard
+
+## Endpoint
+
+```http
+GET /lms/memberships/dashboard
+```
+
+## Permission
+
+```text
+membership.dashboard.read
+```
+
+## Success Response
+
+```json
+{
+  "total_memberships": 150,
+  "active_memberships": 120,
+  "grace_period_memberships": 20,
+  "expired_memberships": 10,
+  "outstanding_amount": 450000,
+  "today_collections": 25000
+}
+```
+
+---
+
+# 2. List Memberships
+
+## Endpoint
+
+```http
+GET /lms/memberships
+```
+
+## Permission
+
+```text
+membership.read
+```
+
+## Query Parameters
+
+```text
+page
+size
+status
+student_id
+course_id
+```
+
+## Success Response
+
+```json
+{
+  "memberships": [],
+  "page": 1,
+  "size": 20,
+  "total": 100
+}
+```
+
+---
+
+# 3. Membership Details
+
+## Endpoint
+
+```http
+GET /lms/memberships/:id
+```
+
+## Permission
+
+```text
+membership.read
+```
+
+## Success Response
+
+```json
+{
+  "membership": {
+    "id": "uuid",
+    "student_id": "uuid",
+    "student_name": "Prasad Naik",
+    "course_name": "Golang Bootcamp",
+    "total_fee": 50000,
+    "amount_paid": 30000,
+    "due_amount": 20000,
+    "membership_status": "GRACE_PERIOD",
+    "grace_expiry_date": "2026-08-15"
+  }
+}
+```
+
+---
+
+# 4. Record Payment
+
+## Endpoint
+
+```http
+POST /lms/payments
+```
+
+## Permission
+
+```text
+payment.create
+```
+
+## Request Body
+
+```json
+{
+  "membership_id": "uuid",
+  "amount": 10000,
+  "payment_method": "UPI",
+  "transaction_reference": "TXN123456"
+}
+```
+
+## Validation
+
+```text
+Membership Exists
+Amount > 0
+Amount <= Due Amount
+```
+
+## Transaction Flow
+
+```text
+Create Payment Record
+        ↓
+Update Amount Paid
+        ↓
+Update Due Amount
+        ↓
+Update Grace Expiry Date
+        ↓
+Recalculate Membership Status
+```
+
+All operations must execute inside a database transaction.
+
+## Success Response
+
+```json
+{
+  "success": true,
+  "payment_id": "uuid",
+  "updated_due_amount": 10000,
+  "membership_status": "GRACE_PERIOD"
+}
+```
+
+## Error Responses
+
+```text
+404 Membership Not Found
+400 Invalid Amount
+409 Payment Exceeds Due Amount
+500 Transaction Failed
+```
+
+---
+
+# 5. Payment History
+
+## Endpoint
+
+```http
+GET /lms/payments
+```
+
+## Permission
+
+```text
+payment.read
+```
+
+## Query Parameters
+
+```text
+page
+size
+membership_id
+student_id
+course_id
+```
+
+## Success Response
+
+```json
+{
+  "payments": [],
+  "page": 1,
+  "size": 20,
+  "total": 50
+}
+```
+
+---
+
+# 6. Payment Details
+
+## Endpoint
+
+```http
+GET /lms/payments/:id
+```
+
+## Permission
+
+```text
+payment.read
+```
+
+## Success Response
+
+```json
+{
+  "payment": {
+    "id": "uuid",
+    "membership_id": "uuid",
+    "student_name": "Prasad Naik",
+    "amount": 10000,
+    "payment_method": "UPI",
+    "transaction_reference": "TXN123456",
+    "paid_at": "2026-07-15T10:00:00Z"
+  }
+}
+```
+
+---
+
+# Supported Payment Methods
+
+```text
+CASH
+UPI
+BANK_TRANSFER
+CHEQUE
+```
+
+---
+
+# Standard Error Response
+
+```json
+{
+  "error": true,
+  "message": "Human readable message",
+  "code": "validation_error",
+  "errors": [
+    {
+      "field": "amount",
+      "message": "amount cannot exceed due amount"
+    }
+  ]
+}
+```
+
+---
+
+# Future Enhancements
+
+```text
+Online Payments
+Invoices
+Receipts
+Refunds
+Installment Plans
+Financial Reports
+Payment Reminders
+```
+
+

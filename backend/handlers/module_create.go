@@ -20,7 +20,7 @@ func CreateModule(c *gin.Context) {
 	courseID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 
-		log.Printf("Invalid course id: %s", c.Param("course_id"))
+		log.Printf("Invalid course id: %s", c.Param("id"))
 
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "invalid course id",

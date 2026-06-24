@@ -18,6 +18,7 @@ func GetCourseDetails(c *gin.Context) {
 	courseID, err := uuid.Parse(id)
 	if err != nil {
 		log.Println("Error : Invalid course ID ")
+		log.Printf("Recieved Course ID %v", courseID)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "invalid course id",
 		})

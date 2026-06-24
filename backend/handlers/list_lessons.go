@@ -15,13 +15,13 @@ func ListLessons(c *gin.Context) {
 
 	log.Printf(
 		"List lessons request received. module_id=%s",
-		c.Param("module_id"),
+		c.Param("id"),
 	)
 
-	moduleID, err := uuid.Parse(c.Param("module_id"))
+	moduleID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 
-		log.Printf("Invalid module id: %s", c.Param("module_id"))
+		log.Printf("Invalid module id: %s", c.Param("id"))
 
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "invalid module id",

@@ -4,6 +4,7 @@ const routeLinks = [
   { label: "Dashboard", to: "/" },
   { label: "Admissions", to: "/admissions" },
   { label: "Manage Company", to: "/company/batches" },
+  { label: "Courses",to: "/courses"}
 ];
 
 const sectionLinks = [

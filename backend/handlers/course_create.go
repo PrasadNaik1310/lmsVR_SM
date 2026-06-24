@@ -23,25 +23,25 @@ func CreateCourse(c *gin.Context) {
 		})
 		return
 	}
+	log.Printf("Recieved request :-> %v", req)
+	/*	sessionID, err := uuid.Parse(req.AcademicSessionID)
+		if err != nil {
+			log.Printf("Error: Invalid academic_session_id")
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "invalid academic_session_id",
+			})
+			return
+		}
 
-	sessionID, err := uuid.Parse(req.AcademicSessionID)
-	if err != nil {
-		log.Printf("Error: Invalid academic_session_id")
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "invalid academic_session_id",
-		})
-		return
-	}
-
-	var session models.AcademicSession
-	if err := db.DB.First(&session, "id = ?", sessionID).Error; err != nil {
-		log.Printf("Error: academic session not found")
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "academic session not found",
-		})
-		return
-	}
-
+		var session models.AcademicSession
+		if err := db.DB.First(&session, "id = ?", sessionID).Error; err != nil {
+			log.Printf("Error: academic session not found")
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "academic session not found",
+			})
+			return
+		}
+	*/
 	var startDate *time.Time
 	var endDate *time.Time
 
@@ -81,11 +81,17 @@ func CreateCourse(c *gin.Context) {
 	creatorID, err := uuid.Parse(userID)*/
 
 	CreatorIDAny, exists := c.Get("user_id")
+	log.Printf(
+		"user_id exists=%v value=%v",
+		exists,
+		CreatorIDAny,
+	)
 	if !exists {
 		log.Println("User ID not found in request ")
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"Error": "User ID not Found ",
 		})
+		return
 	}
 	creatorID, ok := CreatorIDAny.(uuid.UUID)
 	if !ok {
@@ -95,13 +101,13 @@ func CreateCourse(c *gin.Context) {
 		})
 		return
 	}
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "invalid user",
-		})
-		return
-	}
-
+	/*	if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "invalid user",
+			})
+			return
+		}
+	*/
 	course := models.Course{
 		ID:                uuid.New(),
 		Title:             req.Title,
@@ -114,7 +120,7 @@ func CreateCourse(c *gin.Context) {
 		EndDate:           endDate,
 		MeetLink:          req.MeetLink,
 		CreatedBy:         creatorID,
-		AcademicSessionID: sessionID,
+		AcademicSessionID: uuid.Nil,
 	}
 
 	if err := db.DB.Create(&course).Error; err != nil {

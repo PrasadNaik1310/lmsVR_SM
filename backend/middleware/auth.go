@@ -15,6 +15,7 @@ func AuthMiddleWare() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		log.Printf("auath check for method %s , uri %s , client ip %s", c.Request.Method, c.Request.URL.Path, c.ClientIP())
+		log.Printf("Auth Headers recieved , %v", authHeader)
 		log.Printf("Auth header present for client %v  , %d", authHeader != "", len(authHeader))
 
 		if authHeader == "" {

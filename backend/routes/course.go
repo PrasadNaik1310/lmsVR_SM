@@ -10,8 +10,9 @@ func RegisterCourseRoutes(api *gin.RouterGroup) {
 
 	courses := api.Group("/courses")
 	{
+
 		courses.POST("", handlers.CreateCourse)
-		courses.GET("", handlers.ListLessons)
+		courses.GET("", handlers.ListCoursesForUser)
 		courses.GET("/:id", handlers.GetCourseDetails)
 		courses.PUT("/:id", handlers.UpdateCourse)
 		courses.PATCH("/:id/publish", handlers.PublishCourse)

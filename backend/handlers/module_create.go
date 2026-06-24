@@ -15,9 +15,9 @@ import (
 func CreateModule(c *gin.Context) {
 
 	log.Printf("Create module request received. course_id=%s",
-		c.Param("course_id"))
+		c.Param("id"))
 
-	courseID, err := uuid.Parse(c.Param("course_id"))
+	courseID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 
 		log.Printf("Invalid course id: %s", c.Param("course_id"))

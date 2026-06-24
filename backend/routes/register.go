@@ -8,7 +8,9 @@ import (
 func RegisterRoutes(r *gin.Engine) {
 	api := r.Group("/lms")
 	{
-		registerAuthRoutes(api)
+
+		registerAuthRoutes(api) // dont move api.use() line above this line, it will break login page
+		api.Use(middleware.AuthMiddleWare())
 		registerCompanyRoutes(api)
 		RegisterAdmissionRoutes(api)
 		RegisterCourseRoutes(api)

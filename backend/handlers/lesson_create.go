@@ -15,14 +15,14 @@ import (
 func CreateLesson(c *gin.Context) {
 
 	log.Printf(
-		"Create lesson request received. module_id=%s",
-		c.Param("module_id"),
+		"Create lesson request received. id=%s",
+		c.Param("id"),
 	)
 
-	moduleID, err := uuid.Parse(c.Param("module_id"))
+	moduleID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 
-		log.Printf("Invalid module id: %s", c.Param("module_id"))
+		log.Printf("Invalid module id: %s", c.Param("id"))
 
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "invalid module id",
@@ -34,7 +34,7 @@ func CreateLesson(c *gin.Context) {
 
 	if err := db.DB.First(&module, "id = ?", moduleID).Error; err != nil {
 
-		log.Printf("Module not found. module_id=%s", moduleID)
+		log.Printf("Module not found. id=%s", moduleID)
 
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "module not found",
@@ -57,7 +57,7 @@ func CreateLesson(c *gin.Context) {
 	var lessonCount int64
 
 	db.DB.Model(&models.Lesson{}).
-		Where("module_id = ?", moduleID).
+		Where("id = ?", moduleID).
 		Count(&lessonCount)
 
 	lesson := models.Lesson{
@@ -82,7 +82,7 @@ func CreateLesson(c *gin.Context) {
 	}
 
 	log.Printf(
-		"Lesson created successfully. lesson_id=%s module_id=%s",
+		"Lesson created successfully. lesson_id=%s id=%s",
 		lesson.ID,
 		moduleID,
 	)

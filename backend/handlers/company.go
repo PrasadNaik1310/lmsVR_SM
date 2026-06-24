@@ -136,6 +136,13 @@ func ListCoursesForUser(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"courses": courses, "page": page, "size": size, "total": total})
+	for _, course := range courses {
+		log.Printf(
+			"Course=%s Status=%s",
+			course.Title,
+			course.Status,
+		)
+	}
 }
 
 type createBatchRequest struct {

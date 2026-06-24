@@ -1,10 +1,12 @@
 import { createBrowserRouter } from "react-router-dom";
-{/*import AppLayout from "../layouts/AppLayout.jsx";*/}
+{/*import AppLayout from "../layouts/AppLayout.jsx";*/ }
 import AppLayout from "../AppLayout.jsx";
 import Home from "../pages/Home.jsx";
 import ManageCompanyBatches from "../pages/ManageCompanyBatches.jsx";
 import AdmissionsOverview from "../pages/AdmissionsOverview.jsx";
-
+import CourseManagement from "../pages/CourseManagement.jsx";
+import CourseDetails from "../pages/CourseDetails";
+import ModuleDetails from "../pages/ModuleDetails";
 export const router = createBrowserRouter([
   {
     path: "/",
@@ -22,6 +24,18 @@ export const router = createBrowserRouter([
         path: "admissions",
         element: <AdmissionsOverview />,
       },
+      {
+        path: "courses",
+        element: <CourseManagement />,
+      },
+      {
+        path: "/courses/:id",
+        element: <CourseDetails />,
+      },
+      {
+        path: "/modules/:id",
+        element: <ModuleDetails />,
+      }
     ],
   },
 ]);

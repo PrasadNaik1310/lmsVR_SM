@@ -10,7 +10,7 @@ func RegisterCourseModuleRoutes(api *gin.RouterGroup) {
 
 	courses := api.Group("/courses")
 	{
-		courses.POST("/id/modules", handlers.CreateModule)
+		courses.POST("/:id/modules", handlers.CreateModule)
 		courses.GET("/:id/modules", handlers.ListModules)
 	}
 

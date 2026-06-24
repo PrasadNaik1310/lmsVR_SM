@@ -30,6 +30,8 @@ export default function Home() {
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.log(errorData)
+        console.log(localStorage)
         throw new Error(errorData.message || "Login failed. Please check your credentials.");
       }
 

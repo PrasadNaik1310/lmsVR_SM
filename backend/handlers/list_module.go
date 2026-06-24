@@ -13,10 +13,10 @@ import (
 
 func ListModules(c *gin.Context) {
 
-	log.Printf("List modules request received. course_id=%s",
-		c.Param("course_id"))
+	log.Printf("List modules request received. with course 'id'=%s",
+		c.Param("id"))
 
-	courseID, err := uuid.Parse(c.Param("course_id"))
+	courseID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 
 		c.JSON(http.StatusBadRequest, gin.H{

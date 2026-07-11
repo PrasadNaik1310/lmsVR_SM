@@ -1,0 +1,514 @@
+# Course Planning & Logging Module - API Contract (Iteration 2)
+
+## Version
+
+**Version:** v1.1  
+**Module:** Course Planning & Logging  
+**Status:** Approved for Development
+
+---
+
+# Overview
+
+The Course Planning & Logging module enables teachers to schedule lessons that have already been created within a course and maintain logs of conducted sessions.
+
+This module **does not create lessons**. It only schedules existing lessons and records what actually happened during the session.
+
+---
+
+# Scope
+
+## Included
+
+- Course Schedule Management
+- Timeline Planning
+- Schedule Calendar
+- Session Logging
+- Lesson Completion Tracking
+- Schedule Status Management
+
+## Excluded
+
+- Attendance
+- Assignments
+- Quizzes
+- Notifications
+- Calendar Sync
+- Automatic Rescheduling
+
+---
+
+# Permissions
+
+```text
+course_schedule.create
+course_schedule.read
+course_schedule.update
+course_schedule.delete
+
+course_log.create
+course_log.read
+course_log.update
+```
+
+---
+
+# Business Rules
+
+## Course Schedule
+
+- Only published courses can be scheduled.
+- Only existing lessons can be scheduled.
+- A lesson must belong to a module within the specified course.
+- A lesson can have only one active schedule.
+- Only Teachers and Admins can create or modify schedules.
+
+---
+
+## Schedule Status
+
+```text
+SCHEDULED
+ONGOING
+COMPLETED
+POSTPONED
+CANCELLED
+```
+
+---
+
+## Session Log
+
+- A log can only be created for an existing schedule.
+- Every schedule can have only one session log.
+- Logs are editable.
+
+---
+
+## Log Status (completion_status)
+
+```text
+COMPLETED
+PARTIALLY_COMPLETED
+CANCELLED
+```
+
+---
+
+# API Endpoints
+
+---
+
+# 1. Create Course Schedule
+
+## Endpoint
+
+```http
+POST /lms/courses/:id/schedules
+```
+
+> `:id` → Course ID
+
+## Permission
+
+```text
+course_schedule.create
+```
+
+## Request Body
+
+```json
+{
+  "lesson_id": "uuid",
+  "teacher_id": "uuid",
+  "planned_date": "2026-08-10",
+  "start_time": "09:00",
+  "end_time": "10:30"
+}
+```
+
+## Validation
+
+- Course must exist.
+- Course must be published.
+- Lesson must exist.
+- Lesson's module must exist.
+- Lesson's module must belong to the course specified in the route.
+- Teacher must exist.
+- Lesson must not already have an active schedule.
+- End time must be greater than start time.
+
+## Handler Flow
+
+```text
+1. Parse Course ID.
+2. Bind request body.
+3. Validate request body.
+4. Fetch course.
+5. Verify course is published.
+6. Fetch lesson.
+7. Fetch module using lesson.ModuleID.
+8. Verify module.CourseID == CourseID.
+9. Verify teacher exists.
+10. Check lesson has no active schedule.
+11. Validate start_time < end_time.
+12. Create schedule.
+13. Return schedule_id and status.
+```
+
+## Success Response
+
+```json
+{
+  "schedule_id": "uuid",
+  "status": "SCHEDULED"
+}
+```
+
+---
+
+# 2. List Course Schedules
+
+## Endpoint
+
+```http
+GET /lms/courses/:id/schedules
+```
+
+> `:id` → Course ID
+
+## Permission
+
+```text
+course_schedule.read
+```
+
+## Query Parameters
+
+```text
+page
+size
+status
+planned_date
+teacher_id
+```
+
+## Handler Flow
+
+```text
+1. Parse Course ID.
+2. Verify course exists.
+3. Read pagination parameters.
+4. Read optional filters.
+5. Fetch schedules.
+6. Return paginated response.
+```
+
+## Success Response
+
+```json
+{
+  "schedules": [],
+  "page": 1,
+  "size": 20,
+  "total": 35
+}
+```
+
+---
+
+# 3. Get Schedule Details
+
+## Endpoint
+
+```http
+GET /lms/schedules/:id
+```
+
+> `:id` → Schedule ID
+
+## Permission
+
+```text
+course_schedule.read
+```
+
+## Handler Flow
+
+```text
+1. Parse Schedule ID.
+2. Fetch schedule.
+3. Return schedule details.
+```
+
+---
+
+# 4. Update Schedule
+
+## Endpoint
+
+```http
+PUT /lms/schedules/:id
+```
+
+> `:id` → Schedule ID
+
+## Permission
+
+```text
+course_schedule.update
+```
+
+## Editable Fields
+
+```json
+{
+  "planned_date": "2026-08-12",
+  "start_time": "10:00",
+  "end_time": "11:30",
+  "teacher_id": "uuid",
+  "status": "POSTPONED"
+}
+```
+
+## Validation
+
+- Schedule must exist.
+- Updated teacher must exist.
+- Status transition must be valid.
+- End time must be greater than start time.
+
+---
+
+# 5. Delete Schedule
+
+## Endpoint
+
+```http
+DELETE /lms/schedules/:id
+```
+
+> `:id` → Schedule ID
+
+## Permission
+
+```text
+course_schedule.delete
+```
+
+## Validation
+
+- Schedule must exist.
+- Completed schedules cannot be deleted.
+
+---
+
+# 6. Create Session Log
+
+## Endpoint
+
+```http
+POST /lms/schedules/:id/log
+```
+
+> `:id` → Schedule ID
+
+## Permission
+
+```text
+course_log.create
+```
+
+## Request Body
+
+```json
+{
+  "conducted_date": "2026-08-10",
+  "completion_status": "COMPLETED",
+  "remarks": "Completed variables and loops.",
+  "homework": "Practice problems 1-10",
+  "next_topic": "Functions"
+}
+```
+
+## Validation
+
+- Schedule must exist.
+- Session log must not already exist.
+
+## Success Response
+
+```json
+{
+  "log_id": "uuid"
+}
+```
+
+---
+
+# 7. Get Session Log
+
+## Endpoint
+
+```http
+GET /lms/schedules/:id/log
+```
+
+> `:id` → Schedule ID
+
+## Permission
+
+```text
+course_log.read
+```
+
+## Handler Flow
+
+```text
+1. Parse Schedule ID.
+2. Verify schedule exists.
+3. Fetch session log.
+4. Return log.
+```
+
+---
+
+# 8. Update Session Log
+
+## Endpoint
+
+```http
+PUT /lms/course-logs/:id
+```
+
+> `:id` → Log ID
+
+## Permission
+
+```text
+course_log.update
+```
+
+## Editable Fields
+
+```json
+{
+  "completion_status": "PARTIALLY_COMPLETED",
+  "remarks": "Need one more lecture for pointers.",
+  "homework": "Complete worksheet 2",
+  "next_topic": "Pointers"
+}
+```
+
+---
+
+# Standard Error Response
+
+```json
+{
+  "error": true,
+  "message": "Validation failed",
+  "code": "validation_error",
+  "errors": [
+    {
+      "field": "lesson_id",
+      "message": "Lesson already has an active schedule."
+    }
+  ]
+}
+```
+
+---
+
+# Route Convention
+
+## Parent Resource
+
+```http
+GET  /lms/courses/:id/schedules
+POST /lms/courses/:id/schedules
+```
+
+`:id` → Course ID
+
+---
+
+## Schedule Resource
+
+```http
+GET    /lms/schedules/:id
+PUT    /lms/schedules/:id
+DELETE /lms/schedules/:id
+```
+
+`:id` → Schedule ID
+
+---
+
+## Nested Log Resource
+
+```http
+POST /lms/schedules/:id/log
+GET  /lms/schedules/:id/log
+```
+
+`:id` → Schedule ID
+
+---
+
+## Log Resource
+
+```http
+PUT /lms/course-logs/:id
+```
+
+`:id` → Log ID
+
+---
+
+# Handler Convention
+
+Always use:
+
+```go
+id := c.Param("id")
+```
+
+and immediately convert it into the appropriate UUID.
+
+Example:
+
+```go
+courseID, err := uuid.Parse(c.Param("id"))
+```
+
+or
+
+```go
+scheduleID, err := uuid.Parse(c.Param("id"))
+```
+
+depending on the endpoint.
+
+Never use:
+
+```go
+c.Param("course_id")
+c.Param("schedule_id")
+c.Param("log_id")
+```
+
+---
+
+# Future Enhancements
+
+```text
+Recurring schedules
+Calendar integration
+Automatic reminders
+Attendance integration
+Assignment scheduling
+Holiday management
+Drag-and-drop planner
+Teaching analytics
+```

@@ -43,6 +43,24 @@ Admissions
 - PATCH http://localhost:8080/lms/admissions/applications/:id/reject
 	- Permission: admission.application.reject
 
+Course Planning & Logging
+- POST  http://localhost:8080/lms/courses/:id/schedules
+	- Permission: course_schedule.create
+- GET   http://localhost:8080/lms/courses/:id/schedules
+	- Permission: course_schedule.read
+- GET   http://localhost:8080/lms/schedules/:id
+	- Permission: course_schedule.read
+- PUT   http://localhost:8080/lms/schedules/:id
+	- Permission: course_schedule.update
+- DELETE http://localhost:8080/lms/schedules/:id
+	- Permission: course_schedule.delete
+- POST  http://localhost:8080/lms/schedules/:id/log
+	- Permission: course_log.create
+- GET   http://localhost:8080/lms/schedules/:id/log
+	- Permission: course_log.read
+- PUT   http://localhost:8080/lms/course-logs/:id
+	- Permission: course_log.update
+
 Notes:
 - All routes are registered from `backend/routes/register.go`.
 - Auth-protected routes use JWT middleware and route-level permission checks.

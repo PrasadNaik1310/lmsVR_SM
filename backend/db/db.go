@@ -86,7 +86,7 @@ func InitDB() error {
 			&models.Payment{},
 			&models.LiveSession{},
 			&models.LiveSessionAttendance{},
-			&models.CoursePlanner{},
+			&models.CourseSchedule{},
 			&models.CourseLog{},
 			&models.Announcement{},
 			&models.AnnouncementCourse{},
@@ -212,6 +212,13 @@ func SeedData() error {
 		"admission.application.read",
 		"admission.application.approve",
 		"admission.application.reject",
+		"course_schedule.create",
+		"course_schedule.read",
+		"course_schedule.update",
+		"course_schedule.delete",
+		"course_log.create",
+		"course_log.read",
+		"course_log.update",
 	}
 
 	for _, permName := range permissionNames {
@@ -350,7 +357,7 @@ func SeedData() error {
 						ID:         uuid.New(),
 						Title:      title,
 						Level:      "Beginner",
-						Status:     "published",
+						Status:     "PUBLISHED",
 						TotalSeats: 30 + j*10,
 						StartDate:  &start,
 						EndDate:    &end,

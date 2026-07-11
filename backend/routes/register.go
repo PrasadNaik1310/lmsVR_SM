@@ -16,6 +16,7 @@ func RegisterRoutes(r *gin.Engine) {
 		RegisterCourseRoutes(api)
 		RegisterCourseModuleRoutes(api)
 		RegisterCourseLessonRoutes(api)
+		RegisterCourseScheduleRoutes(api)
 	}
 }
 

@@ -1,0 +1,184 @@
+# Course Creation & Management Module API Contract
+
+**Version:** v1.1\
+**Status:** Implemented (Current Backend)
+
+------------------------------------------------------------------------
+
+# Overview
+
+This module enables teachers and administrators to create, manage,
+organize and publish LMS courses.
+
+Course hierarchy:
+
+``` text
+Course
+│
+├── Modules
+│     ├── Lessons
+│     │      └── Resources (Deferred)
+│     └── Position
+│
+├── Invite Link
+└── Publish Status
+```
+
+## Scope
+
+### Implemented
+
+-   Course Creation
+-   Course Listing (Logged-in user's courses)
+-   Course Details
+-   Course Update
+-   Course Publish
+-   Generate Invite Link
+-   Module Creation
+-   Module Listing
+-   Module Deletion (Hard Delete)
+-   Lesson Creation
+-   Lesson Listing
+-   Lesson Details
+-   Lesson Deletion
+-   JWT Authentication
+
+### Deferred
+
+-   Academic Session Integration
+-   Lesson Resource Uploads
+-   Student Enrollment
+-   Membership Integration
+-   Payments
+-   Batch Assignment UI
+-   Module Update
+-   Lesson Update
+
+------------------------------------------------------------------------
+
+# Authentication
+
+All endpoints require:
+
+``` http
+Authorization: Bearer <JWT>
+```
+
+Authenticated user is obtained from:
+
+``` go
+c.Get("user_id")
+```
+
+------------------------------------------------------------------------
+
+# Course APIs
+
+  Method   Endpoint                     Status
+  -------- ---------------------------- --------
+  POST     `/lms/courses`               done
+  GET      `/lms/courses`               done
+  GET      `/lms/courses/:id`           done
+  PUT      `/lms/courses/:id`           done
+  PATCH    `/lms/courses/:id/publish`   done
+  POST     `/lms/courses/:id/invite`    done
+
+New courses start with status **DRAFT**. Academic session integration is
+currently deferred.
+
+------------------------------------------------------------------------
+
+# Module APIs
+
+  Method   Endpoint                     Status
+  -------- ---------------------------- ----------------
+  POST     `/lms/courses/:id/modules`   done
+  GET      `/lms/courses/:id/modules`   done
+  PUT      `/lms/modules/:id`           Deferred
+  DELETE   `/lms/modules/:id`           ✅ Hard Delete
+
+Validation: - Course must exist. - Position maintained. - Cannot delete
+module containing lessons.
+
+------------------------------------------------------------------------
+
+# Lesson APIs
+
+  Method   Endpoint                     Status
+  -------- ---------------------------- -------------
+  POST     `/lms/modules/:id/lessons`   done
+  GET      `/lms/modules/:id/lessons`   done
+  GET      `/lms/lessons/:id`           done
+  PUT      `/lms/lessons/:id`           ⏳ Deferred
+  DELETE   `/lms/lessons/:id`           done
+
+------------------------------------------------------------------------
+
+# Invite API
+
+``` http
+POST /lms/courses/:id/invite
+```
+
+Returns a unique invite code and invite link. Enrollment integration is
+deferred.
+
+------------------------------------------------------------------------
+
+# Publish Validation
+
+A course can only be published when: - At least one module exists. - At
+least one lesson exists.
+
+------------------------------------------------------------------------
+
+# Course Lifecycle
+
+``` text
+Create Course
+      │
+      ▼
+DRAFT
+      │
+      ▼
+Create Modules
+      │
+      ▼
+Create Lessons
+      │
+      ▼
+Publish
+      │
+      ▼
+PUBLISHED
+      │
+      ▼
+Generate Invite
+      │
+      ▼
+Enrollment (Future)
+```
+
+------------------------------------------------------------------------
+
+# Future Roadmap
+
+## High Priority
+
+-   Lesson Resource Upload (PDF)
+-   Module Update
+-   Lesson Update
+
+## Medium Priority
+
+-   Enrollment Module
+-   Membership Integration
+-   Batch Assignment
+
+## Low Priority
+
+-   Payments
+-   Quizzes
+-   Assignments
+-   Certificates
+-   Analytics

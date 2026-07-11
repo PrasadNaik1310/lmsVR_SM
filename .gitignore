@@ -146,3 +146,5 @@ vite.config.ts.timestamp-*
 !README.md
 #local compiled binary
 cmd
+#Zip files for modules
+*.zip

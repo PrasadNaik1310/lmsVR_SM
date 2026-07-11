@@ -18,7 +18,7 @@ func ListModules(c *gin.Context) {
 
 	courseID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-
+		log.Printf("Error: Failed to parse Course ID , might be invalid ")
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "invalid course id",
 		})

@@ -13,15 +13,22 @@ services:
     environment:
       NODE_ENV: development
       PNPM_HOME: /pnpm
+      TMPDIR: /tmp
       PATH: /pnpm:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-    user: app
-    cap_drop:
-      - ALL
     security_opt:
       - no-new-privileges:true
     tty: true
     stdin_open: true
-    command: sh -lc "pnpm dev -- --host 0.0.0.0 --port 5173"
+    entrypoint:
+      - sh
+      - -lc
+      - |
+        rm -rf /app/node_modules
+        mkdir -p /app/node_modules
+        cp -a /opt/frontend_node_modules/. /app/node_modules/
+        mkdir -p /app/node_modules/.vite-temp
+        chmod -R a+rwX /app/node_modules || true
+        exec ./node_modules/.bin/vite --host 0.0.0.0 --port 5173
 
   audit:
     build:
@@ -37,13 +44,20 @@ services:
     environment:
       NODE_ENV: development
       PNPM_HOME: /pnpm
+      TMPDIR: /tmp
       PATH: /pnpm:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-    user: app
-    cap_drop:
-      - ALL
     security_opt:
       - no-new-privileges:true
-    command: sh -lc "pnpm audit"
+    entrypoint:
+      - sh
+      - -lc
+      - |
+        rm -rf /app/node_modules
+        mkdir -p /app/node_modules
+        cp -a /opt/frontend_node_modules/. /app/node_modules/
+        mkdir -p /app/node_modules/.vite-temp
+        chmod -R a+rwX /app/node_modules || true
+        exec pnpm audit
 
 volumes:
   frontend_node_modules:

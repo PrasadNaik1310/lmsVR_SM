@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { http } from "../services/http";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/Tabs";
+import CourseSchedule from "../components/CourseSchedule";
 
 export default function CourseDetails() {
   const { id } = useParams();
@@ -90,168 +92,150 @@ export default function CourseDetails() {
   }, []);
 
   return (
-    <div className="p-6 space-y-8">
+    <div className="p-6">
+      <Tabs defaultValue="overview">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="modules">Modules</TabsTrigger>
+          <TabsTrigger value="students">Students</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsTrigger value="schedule">Schedule</TabsTrigger>
+        </TabsList>
 
-      {/* Course Details */}
+        <TabsContent value="overview">
+          <div className="space-y-8">
+            <div className="bg-white shadow rounded p-6">
+              <h1 className="text-3xl font-bold">{course?.title}</h1>
 
-      <div className="bg-white shadow rounded p-6">
-        <h1 className="text-3xl font-bold">
-          {course?.title}
-        </h1>
+              <p className="mt-2 text-gray-600">{course?.description}</p>
 
-        <p className="mt-2 text-gray-600">
-          {course?.description}
-        </p>
+              <div className="mt-4">
+                <span className="font-semibold">Status:</span>{" "}
+                {course?.status}
+              </div>
 
-        <div className="mt-4">
-          <span className="font-semibold">
-            Status:
-          </span>{" "}
-          {course?.status}
-        </div>
+              <div className="mt-2">
+                <span className="font-semibold">Level:</span>{" "}
+                {course?.level}
+              </div>
+            </div>
+          </div>
+        </TabsContent>
 
-        <div className="mt-2">
-          <span className="font-semibold">
-            Level:
-          </span>{" "}
-          {course?.level}
-        </div>
-      </div>
+        <TabsContent value="modules">
+          <div className="space-y-8">
+            <div className="bg-white shadow rounded p-6">
+              <h2 className="text-xl font-semibold mb-4">Create Module</h2>
 
-      {/* Create Module */}
+              <form onSubmit={handleCreateModule} className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Module Title"
+                  value={form.title}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      title: e.target.value,
+                    })
+                  }
+                  className="w-full border rounded p-2"
+                  required
+                />
 
-      <div className="bg-white shadow rounded p-6">
-        <h2 className="text-xl font-semibold mb-4">
-          Create Module
-        </h2>
+                <textarea
+                  placeholder="Description"
+                  value={form.description}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      description: e.target.value,
+                    })
+                  }
+                  className="w-full border rounded p-2"
+                  rows={4}
+                />
 
-        <form
-          onSubmit={handleCreateModule}
-          className="space-y-4"
-        >
-          <input
-            type="text"
-            placeholder="Module Title"
-            value={form.title}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                title: e.target.value,
-              })
-            }
-            className="w-full border rounded p-2"
-            required
-          />
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="Position"
+                  value={form.position}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      position: e.target.value,
+                    })
+                  }
+                  className="w-full border rounded p-2"
+                />
 
-          <textarea
-            placeholder="Description"
-            value={form.description}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                description: e.target.value,
-              })
-            }
-            className="w-full border rounded p-2"
-            rows={4}
-          />
+                <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded">
+                  Add Module
+                </button>
+              </form>
+            </div>
 
-          <input
-            type="number"
-            min="1"
-            placeholder="Position"
-            value={form.position}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                position: e.target.value,
-              })
-            }
-            className="w-full border rounded p-2"
-          />
+            <div className="bg-white shadow rounded p-6">
+              <h2 className="text-xl font-semibold mb-4">Modules</h2>
 
-          <button
-            type="submit"
-            className="bg-green-600 text-white px-4 py-2 rounded"
-          >
-            Add Module
-          </button>
-        </form>
-      </div>
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2">Position</th>
+                    <th className="text-left p-2">Title</th>
+                    <th className="text-left p-2">Description</th>
+                    <th className="text-left p-2">Actions</th>
+                  </tr>
+                </thead>
 
-      {/* Modules List */}
+                <tbody>
+                  {modules.map((module) => (
+                    <tr key={module.id} className="border-b">
+                      <td className="p-2">{module.position}</td>
+                      <td className="p-2">{module.title}</td>
+                      <td className="p-2">{module.description}</td>
+                      <td className="p-2">
+                        <button
+                          onClick={() => navigate(`/modules/${module.id}`)}
+                          className="bg-blue-600 text-white px-3 py-1 rounded"
+                        >
+                          Lessons
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
 
-      <div className="bg-white shadow rounded p-6">
-        <h2 className="text-xl font-semibold mb-4">
-          Modules
-        </h2>
+                  {modules.length === 0 && (
+                    <tr>
+                      <td colSpan="4" className="text-center p-4 text-gray-500">
+                        No modules found
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
 
-        <table className="w-full">
-          <thead>
-            <tr className="border-b">
-              <th className="text-left p-2">
-                Position
-              </th>
+        <TabsContent value="students">
+          <div className="bg-white shadow rounded p-6">
+            <h2 className="text-xl font-semibold mb-2">Students</h2>
+            <p className="text-gray-600">Students list and management will appear here.</p>
+          </div>
+        </TabsContent>
 
-              <th className="text-left p-2">
-                Title
-              </th>
+        <TabsContent value="settings">
+          <div className="bg-white shadow rounded p-6">
+            <h2 className="text-xl font-semibold mb-2">Settings</h2>
+            <p className="text-gray-600">Course settings and configuration go here.</p>
+          </div>
+        </TabsContent>
 
-              <th className="text-left p-2">
-                Description
-              </th>
-
-              <th className="text-left p-2">
-                Actions
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {modules.map((module) => (
-              <tr
-                key={module.id}
-                className="border-b"
-              >
-                <td className="p-2">
-                  {module.position}
-                </td>
-
-                <td className="p-2">
-                  {module.title}
-                </td>
-
-                <td className="p-2">
-                  {module.description}
-                </td>
-
-                <td className="p-2">
-                  <button
-                    onClick={() =>
-                      navigate(`/modules/${module.id}`)
-                    }
-                    className="bg-blue-600 text-white px-3 py-1 rounded"
-                  >
-                    Lessons
-                  </button>
-                </td>
-              </tr>
-            ))}
-
-            {modules.length === 0 && (
-              <tr>
-                <td
-                  colSpan="4"
-                  className="text-center p-4 text-gray-500"
-                >
-                  No modules found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
+        <TabsContent value="schedule">
+          <CourseSchedule courseId={id} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

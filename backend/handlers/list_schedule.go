@@ -8,6 +8,7 @@ import (
 
 	"github.com/PrasadNaik1310/LMSVR_SM/db"
 	"github.com/PrasadNaik1310/LMSVR_SM/models"
+	"github.com/PrasadNaik1310/LMSVR_SM/requests"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -73,6 +74,11 @@ func ListSchedules(c *gin.Context) {
 		return
 
 	}
+	var response []requests.CourseScheduleResponse
+
+	for _, schedule := range schedules{
+		response = append(response, ...)
+	}
 	log.Printf(
 		"Schedules fetched successfully. course_id=%s count=%d",
 		CourseID,
@@ -80,7 +86,7 @@ func ListSchedules(c *gin.Context) {
 	)
 
 	c.JSON(http.StatusOK, gin.H{
-		"schedules": schedule,
+		"schedules": response,
 		"page":      page,
 		"size":      size,
 		"total":     total,

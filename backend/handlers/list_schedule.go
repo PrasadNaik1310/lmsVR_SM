@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/PrasadNaik1310/LMSVR_SM/db"
-	"github.com/PrasadNaik1310/LMSVR_SM/models"
 	"github.com/PrasadNaik1310/LMSVR_SM/requests"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -15,6 +14,7 @@ import (
 
 func ListSchedules(c *gin.Context) {
 	log.Printf("List schedules request recieved with course id = %v", c.Param("id"))
+
 	CourseID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		log.Printf("Failed to Parse UUID , invalid UUID")
@@ -26,11 +26,13 @@ func ListSchedules(c *gin.Context) {
 
 	page := 1
 	size := 20
+
 	if p := c.Query("page"); p != "" {
 		if parsed, parseErr := strconv.Atoi(p); parseErr == nil && parsed > 0 {
 			page = parsed
 		}
 	}
+
 	if s := c.Query("size"); s != "" {
 		if parsed, parseErr := strconv.Atoi(s); parseErr == nil && parsed > 0 {
 			size = parsed
@@ -41,48 +43,73 @@ func ListSchedules(c *gin.Context) {
 	plannedDate := c.Query("planned_date")
 	teacherID := c.Query("teacher_id")
 
-	query := db.DB.Model(&models.CourseSchedule{}).Where("course_id = ?", CourseID)
+	query := db.DB.
+		Table("course_schedules cs").
+		Joins("JOIN lessons l ON l.id = cs.lesson_id").
+		Joins("JOIN users u ON u.id = cs.teacher_id").
+		Where("cs.course_id = ?", CourseID)
+
 	if status != "" {
-		query = query.Where("status = ?", status)
+		query = query.Where("cs.status = ?", status)
 	}
+
 	if plannedDate != "" {
 		if parsedDate, parseErr := time.Parse("2006-01-02", plannedDate); parseErr == nil {
-			query = query.Where("planned_date::date = ?", parsedDate.Format("2006-01-02"))
+			query = query.Where(
+				"DATE(cs.planned_date) = ?",
+				parsedDate.Format("2006-01-02"),
+			)
 		}
 	}
+
 	if teacherID != "" {
 		if parsedTeacherID, parseErr := uuid.Parse(teacherID); parseErr == nil {
-			query = query.Where("teacher_id = ?", parsedTeacherID)
+			query = query.Where("cs.teacher_id = ?", parsedTeacherID)
 		}
 	}
 
 	var total int64
+
 	if err := query.Count(&total).Error; err != nil {
 		log.Printf("Error: Failed to count schedules %v", err)
+
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "failed to count schedules",
 		})
 		return
 	}
 
-	var schedule []models.CourseSchedule
-	if err := query.Order("planned_date DESC").Offset((page - 1) * size).Limit(size).Find(&schedule).Error; err != nil {
-		log.Printf("Error: Failed to Fetch Schedules  %v ", err)
+	var response []requests.CourseScheduleResponse
+
+	if err := query.
+		Select(`
+			cs.id,
+			cs.lesson_id,
+			l.title AS lesson_title,
+			cs.teacher_id,
+			CONCAT(u.first_name, ' ', u.last_name) AS teacher_name,
+			cs.planned_date,
+			cs.planned_start_time,
+			cs.planned_end_time,
+			cs.status
+		`).
+		Order("cs.planned_date DESC").
+		Offset((page - 1) * size).
+		Limit(size).
+		Scan(&response).Error; err != nil {
+
+		log.Printf("Error: Failed to Fetch Schedules %v", err)
+
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "failed to fetch schedules",
 		})
 		return
-
 	}
-	var response []requests.CourseScheduleResponse
 
-	for _, schedule := range schedules{
-		response = append(response, ...)
-	}
 	log.Printf(
 		"Schedules fetched successfully. course_id=%s count=%d",
 		CourseID,
-		len(schedule),
+		len(response),
 	)
 
 	c.JSON(http.StatusOK, gin.H{

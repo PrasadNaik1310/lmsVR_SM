@@ -15,6 +15,7 @@ import (
 )
 
 func CreateSchedule(c *gin.Context) {
+	log.Printf("Request received to create schedule for course id = %v", c.Param("id"))
 	var req requests.CreateScheduleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Printf("Request not binding with request struct :-> %v", err)
@@ -78,6 +79,7 @@ func CreateSchedule(c *gin.Context) {
 	}
 
 	var teacher models.Teacher
+	log.Printf("TeacherID received from request = %s", req.TeacherID)
 	if err := db.DB.First(&teacher, "id = ?", req.TeacherID).Error; err != nil {
 		log.Printf("Teacher not found err:-> %v", err)
 		c.JSON(http.StatusNotFound, gin.H{

@@ -400,6 +400,89 @@ func SeedData() error {
 			}
 		}
 	}
+	// =====================================
+	// Seed Teacher Role
+	// =====================================
+
+	teacherRoleName := "teacher"
+
+	var teacherRole models.Role
+
+	if err := DB.Where("name = ?", teacherRoleName).First(&teacherRole).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			teacherRole = models.Role{
+				ID:          uuid.New(),
+				Name:        teacherRoleName,
+				Description: "Teacher role",
+			}
+
+			if err := DB.Create(&teacherRole).Error; err != nil {
+				log.Printf("Failed to create teacher role: %v", err)
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+
+	// =====================================
+	// Seed Teacher User
+	// =====================================
+
+	var teacherUser models.User
+
+	if err := DB.Where("email = ?", "teacher1@lms.com").First(&teacherUser).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+
+			teacherUser = models.User{
+				ID:           uuid.New(),
+				FirstName:    "teacher",
+				LastName:     "1",
+				Email:        "teacher1@lms.com",
+				PasswordHash: "$2a$10$dummyhashreplacewithrealone",
+				RoleID:       teacherRole.ID,
+				IsActive:     true,
+			}
+
+			if err := DB.Create(&teacherUser).Error; err != nil {
+				log.Printf("Failed to create teacher user: %v", err)
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+
+	// =====================================
+	// Seed Teacher Profile
+	// =====================================
+
+	var teacher models.Teacher
+
+	if err := DB.Where("user_id = ?", teacherUser.ID).First(&teacher).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+
+			teacher = models.Teacher{
+				ID:             uuid.New(),
+				UserID:         teacherUser.ID,
+				Specialization: "Computer Science",
+				Bio:            "Seeded teacher profile",
+			}
+
+			if err := DB.Create(&teacher).Error; err != nil {
+				log.Printf("Failed to create teacher profile: %v", err)
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+
+	log.Printf(
+		"Teacher seeded successfully. teacher_id=%s user_id=%s",
+		teacher.ID,
+		teacherUser.ID,
+	)
 
 	return nil
 }

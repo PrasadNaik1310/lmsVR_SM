@@ -23,7 +23,7 @@ The platform is being developed to:
 
 # Core Modules
 
-## 1. Admissions Module
+## 1. Admissions Module (Completed)
 
 Handles the complete admission workflow from enquiry to student onboarding.
 
@@ -36,7 +36,7 @@ Handles the complete admission workflow from enquiry to student onboarding.
 
 ---
 
-## 2. Manage Company Module
+## 2. Manage Company Module(Completed)
 
 Handles organizational and academic management.
 
@@ -79,7 +79,7 @@ Central dashboard for administrators.
 
 ---
 
-## 5. Course Creation Module
+## 5. Course Creation Module (Completed)
 
 Allows teachers and administrators to create and manage courses.
 
@@ -93,7 +93,7 @@ Allows teachers and administrators to create and manage courses.
 
 ---
 
-## 6. Course Planning & Logging
+## 6. Course Planning & Logging (Completed)
 
 Used for scheduling and tracking academic sessions.
 

@@ -440,6 +440,7 @@ func SeedData() error {
 				LastName:     "1",
 				Email:        "teacher1@lms.com",
 				PasswordHash: "$2a$10$dummyhashreplacewithrealone",
+				Phone:        "1234567890",
 				RoleID:       teacherRole.ID,
 				IsActive:     true,
 			}

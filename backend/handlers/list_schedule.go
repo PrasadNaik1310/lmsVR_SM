@@ -46,7 +46,8 @@ func ListSchedules(c *gin.Context) {
 	query := db.DB.
 		Table("course_schedules cs").
 		Joins("JOIN lessons l ON l.id = cs.lesson_id").
-		Joins("JOIN users u ON u.id = cs.teacher_id").
+		Joins("JOIN teachers t ON t.id = cs.teacher_id").
+		Joins("JOIN users u ON u.id = t.user_id").
 		Where("cs.course_id = ?", CourseID)
 
 	if status != "" {

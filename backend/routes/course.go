@@ -19,3 +19,9 @@ func RegisterCourseRoutes(api *gin.RouterGroup) {
 		courses.POST("/:id/invite", handlers.GenerateCourseInvite)
 	}
 }
+func RegisterTeacherRoutes(api *gin.RouterGroup) {
+	teachers := api.Group("/teachers")
+	{
+		teachers.GET("", handlers.ListTeachers)
+	}
+}

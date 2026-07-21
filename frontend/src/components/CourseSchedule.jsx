@@ -5,9 +5,12 @@ export default function CourseSchedule({ courseId }) {
   const token = localStorage.getItem("auth_token");
 
   const [schedules, setSchedules] = useState([]);
-  const [modules, setModules] = useState([]);
   const [lessons, setLessons] = useState([]);
   const [teachers, setTeachers] = useState([]);
+
+  const [selectedSchedule, setSelectedSchedule] = useState(null);
+  const [existingLog, setExistingLog] = useState(null);
+  const [showLogModal, setShowLogModal] = useState(false);
 
   const [form, setForm] = useState({
     lesson_id: "",
@@ -15,6 +18,14 @@ export default function CourseSchedule({ courseId }) {
     planned_date: "",
     start_time: "",
     end_time: "",
+  });
+
+  const [logForm, setLogForm] = useState({
+    conducted_date: "",
+    completion_status: "COMPLETED",
+    remarks: "",
+    homework: "",
+    next_topic: "",
   });
 
   async function fetchSchedules() {
@@ -32,7 +43,7 @@ export default function CourseSchedule({ courseId }) {
     }
   }
 
-  async function fetchModules() {
+  async function fetchModulesAndLessons() {
     try {
       const res = await http.get(`/courses/${courseId}/modules`, {
         headers: {
@@ -40,12 +51,11 @@ export default function CourseSchedule({ courseId }) {
         },
       });
 
-      const modulesData = res.data.modules || [];
-      setModules(modulesData);
+      const modules = res.data.modules || [];
 
       let allLessons = [];
 
-      for (const module of modulesData) {
+      for (const module of modules) {
         try {
           const lessonRes = await http.get(
             `/modules/${module.id}/lessons`,
@@ -71,7 +81,7 @@ export default function CourseSchedule({ courseId }) {
       setLessons(allLessons);
     } catch (err) {
       console.error(err);
-      alert("Failed to fetch modules");
+      alert("Failed to fetch lessons");
     }
   }
 
@@ -131,9 +141,93 @@ export default function CourseSchedule({ courseId }) {
     }
   }
 
+  async function openLog(schedule) {
+    setSelectedSchedule(schedule);
+
+    try {
+      const res = await http.get(
+        `/schedules/${schedule.id}/log`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const log = res.data.log;
+
+      setExistingLog(log);
+
+      setLogForm({
+        conducted_date: log.conducted_date.split("T")[0],
+        completion_status: log.completion_status,
+        remarks: log.remarks || "",
+        homework: log.homework || "",
+        next_topic: log.next_topic || "",
+      });
+    } catch (err) {
+      setExistingLog(null);
+
+      setLogForm({
+        conducted_date: "",
+        completion_status: "COMPLETED",
+        remarks: "",
+        homework: "",
+        next_topic: "",
+      });
+    }
+
+    setShowLogModal(true);
+  }
+
+  async function saveLog(e) {
+    e.preventDefault();
+
+    try {
+      if (existingLog) {
+        await http.put(
+          `/course-logs/${existingLog.id}`,
+          {
+            completion_status:
+              logForm.completion_status,
+            remarks: logForm.remarks,
+            homework: logForm.homework,
+            next_topic: logForm.next_topic,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+      } else {
+        await http.post(
+          `/schedules/${selectedSchedule.id}/log`,
+          logForm,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+      }
+
+      alert("Log saved");
+
+      setShowLogModal(false);
+    } catch (err) {
+      console.error(err);
+
+      alert(
+        err?.response?.data?.error ||
+          "Failed to save log"
+      );
+    }
+  }
+
   useEffect(() => {
     fetchSchedules();
-    fetchModules();
+    fetchModulesAndLessons();
     fetchTeachers();
   }, [courseId]);
 
@@ -256,6 +350,7 @@ export default function CourseSchedule({ courseId }) {
               <th className="text-left p-2">Start</th>
               <th className="text-left p-2">End</th>
               <th className="text-left p-2">Status</th>
+              <th className="text-left p-2">Actions</th>
             </tr>
           </thead>
 
@@ -290,13 +385,24 @@ export default function CourseSchedule({ courseId }) {
                 <td className="p-2">
                   {schedule.status}
                 </td>
+
+                <td className="p-2">
+                  <button
+                    onClick={() =>
+                      openLog(schedule)
+                    }
+                    className="bg-indigo-600 text-white px-3 py-1 rounded"
+                  >
+                    Log
+                  </button>
+                </td>
               </tr>
             ))}
 
             {schedules.length === 0 && (
               <tr>
                 <td
-                  colSpan="6"
+                  colSpan="7"
                   className="text-center p-4 text-gray-500"
                 >
                   No schedules found
@@ -306,6 +412,120 @@ export default function CourseSchedule({ courseId }) {
           </tbody>
         </table>
       </div>
+
+      {showLogModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+          <div className="bg-white rounded shadow p-6 w-[700px]">
+            <h2 className="text-xl font-semibold mb-4">
+              {existingLog
+                ? "Edit Session Log"
+                : "Create Session Log"}
+            </h2>
+
+            <form
+              onSubmit={saveLog}
+              className="space-y-4"
+            >
+              {!existingLog && (
+                <input
+                  type="date"
+                  value={logForm.conducted_date}
+                  onChange={(e) =>
+                    setLogForm({
+                      ...logForm,
+                      conducted_date:
+                        e.target.value,
+                    })
+                  }
+                  className="w-full border rounded p-2"
+                  required
+                />
+              )}
+
+              <select
+                value={
+                  logForm.completion_status
+                }
+                onChange={(e) =>
+                  setLogForm({
+                    ...logForm,
+                    completion_status:
+                      e.target.value,
+                  })
+                }
+                className="w-full border rounded p-2"
+              >
+                <option value="COMPLETED">
+                  COMPLETED
+                </option>
+
+                <option value="PARTIALLY_COMPLETED">
+                  PARTIALLY_COMPLETED
+                </option>
+
+                <option value="CANCELLED">
+                  CANCELLED
+                </option>
+              </select>
+
+              <textarea
+                placeholder="Remarks"
+                value={logForm.remarks}
+                onChange={(e) =>
+                  setLogForm({
+                    ...logForm,
+                    remarks: e.target.value,
+                  })
+                }
+                className="w-full border rounded p-2"
+              />
+
+              <textarea
+                placeholder="Homework"
+                value={logForm.homework}
+                onChange={(e) =>
+                  setLogForm({
+                    ...logForm,
+                    homework: e.target.value,
+                  })
+                }
+                className="w-full border rounded p-2"
+              />
+
+              <textarea
+                placeholder="Next Topic"
+                value={logForm.next_topic}
+                onChange={(e) =>
+                  setLogForm({
+                    ...logForm,
+                    next_topic: e.target.value,
+                  })
+                }
+                className="w-full border rounded p-2"
+              />
+
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  className="bg-green-600 text-white px-4 py-2 rounded"
+                >
+                  Save
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowLogModal(false)
+                  }
+                  className="bg-gray-500 text-white px-4 py-2 rounded"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

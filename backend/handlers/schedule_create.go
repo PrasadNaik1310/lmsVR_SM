@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"errors"
 	"log"
 	"net/http"
 	"time"
@@ -11,7 +10,6 @@ import (
 	"github.com/PrasadNaik1310/LMSVR_SM/requests"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 func CreateSchedule(c *gin.Context) {
@@ -122,24 +120,24 @@ func CreateSchedule(c *gin.Context) {
 		return
 	}
 
-	var existingSchedule models.CourseSchedule
-	if err := db.DB.Where(
-		"lesson_id = ? AND status NOT IN ?",
-		req.LessonID,
-		[]string{"COMPLETED", "CANCELLED"},
-	).First(&existingSchedule).Error; err == nil {
-		c.JSON(http.StatusConflict, gin.H{
-			"error": "lesson already has an active schedule",
-		})
-		return
-	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-		log.Printf("Failed to check existing schedule: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "failed to validate existing schedule",
-		})
-		return
-	}
-
+	/*	var existingSchedule models.CourseSchedule
+		if err := db.DB.Where(
+			"lesson_id = ? AND status NOT IN ?",
+			req.LessonID,
+			[]string{"COMPLETED", "CANCELLED"},
+		).First(&existingSchedule).Error; err == nil {
+			c.JSON(http.StatusConflict, gin.H{
+				"error": "lesson already has an active schedule",
+			})
+			return
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Printf("Failed to check existing schedule: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to validate existing schedule",
+			})
+			return
+		}
+	*/
 	userIDAny, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{

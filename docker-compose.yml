@@ -29,6 +29,16 @@ services:
         mkdir -p /app/node_modules/.vite-temp
         chmod -R a+rwX /app/node_modules || true
         exec ./node_modules/.bin/vite --host 0.0.0.0 --port 5173
+        services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: lmsvr-sm-backend:dev
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./backend/cmd/.env
 
   audit:
     build:
@@ -62,3 +72,4 @@ services:
 volumes:
   frontend_node_modules:
   pnpm_store:
+  

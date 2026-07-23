@@ -62,7 +62,8 @@ func InitDB() error {
 	sqlDB.SetMaxIdleConns(102)
 	sqlDB.SetConnMaxIdleTime(10 * time.Minute)
 	if os.Getenv("run_migrations") == "true" {
-		log.Printf("Running migrations !!")
+		log.Printf("RUNNING MIGRATIONS//////// !!")
+		time.Sleep(2 * time.Second) // let Dev know abt starting migrations
 		err = DB.AutoMigrate(
 			&models.Role{},
 			&models.Permission{},
@@ -126,47 +127,51 @@ END$$;
 		log.Printf("models migration doneeee!!")
 	}
 	// Create default user if not exists
-	defaultEmail := "1@2.com"
-	defaultPassword := "123"
-	hashedDefaultPassword, err := services.HashPassword(defaultPassword)
-	if err != nil {
-		log.Printf("Failed to hash default user password: %v", err)
-		return err
-	}
-	var user models.User
-	err = DB.Where("email = ?", defaultEmail).First(&user).Error
-	if err != nil {
-		if err.Error() == "record not found" || err == gorm.ErrRecordNotFound {
-			user = models.User{
-				ID:        uuid.New(),
-				FirstName: "Default",
-				LastName:  "User",
-				Email:     defaultEmail,
-				//PasswordHash: defaultPassword, // In production, hash this!
-				PasswordHash: hashedDefaultPassword,
-				IsActive:     true,
-			}
-			if createErr := DB.Create(&user).Error; createErr != nil {
-				log.Printf("Failed to create default user: %v", createErr)
-				return createErr
-			}
-			log.Printf("Default user created: %s", defaultEmail)
-		} else {
-			log.Printf("Failed to query for default user: %v", err)
+	if os.Getenv("APP_ENV") == "seeding" {
+		log.Printf("SEEDING DEFAULT USER AND PASSWORD...")
+		time.Sleep(2 * time.Second) // let Dev know abt starting seeding
+		defaultEmail := "1@2.com"
+		defaultPassword := "123"
+		hashedDefaultPassword, err := services.HashPassword(defaultPassword)
+		if err != nil {
+			log.Printf("Failed to hash default user password: %v", err)
 			return err
 		}
-	} else {
-		log.Printf("Default user already exists: %s", defaultEmail)
-	}
+		var user models.User
+		err = DB.Where("email = ?", defaultEmail).First(&user).Error
+		if err != nil {
+			if err.Error() == "record not found" || err == gorm.ErrRecordNotFound {
+				user = models.User{
+					ID:        uuid.New(),
+					FirstName: "Default",
+					LastName:  "User",
+					Email:     defaultEmail,
+					//PasswordHash: defaultPassword, // In production, hash this!
+					PasswordHash: hashedDefaultPassword,
+					IsActive:     true,
+				}
+				if createErr := DB.Create(&user).Error; createErr != nil {
+					log.Printf("Failed to create default user: %v", createErr)
+					return createErr
+				}
+				log.Printf("Default user created: %s", defaultEmail)
+			} else {
+				log.Printf("Failed to query for default user: %v", err)
+				return err
+			}
+		} else {
+			log.Printf("Default user already exists: %s", defaultEmail)
+		}
 
-	// Seed data after migrations and basic user setup
-	if err := SeedData(); err != nil {
-		log.Printf("Warning: Seeding failed (non-fatal): %v", err)
-		// Continue even if seeding fails - it's not critical for DB init
-	}
-	if os.Getenv("APP_ENV") == "seeding" {
+		// Seed data after migrations and basic user setup
+		if err := SeedData(); err != nil {
+			log.Printf("Warning: Seeding failed (non-fatal): %v", err)
+			// Continue even if seeding fails - it's not critical for DB init
+		}
+
 		log.Println("+++++++++++=================+++++++++====+++++++++")
 		log.Println("Starting seeding data for applications and enquiry")
+		time.Sleep(2 * time.Second) // let Dev know abt starting seeding
 		if err := seed.MigrateAndSeed(DB); err != nil {
 			log.Fatalf("Failed at data migration for applicationa and enquiry")
 		}

@@ -62,13 +62,16 @@ func Login(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": "ACCESS TOKEN NOT CONFIGURED , INTERNAL SERVER SIDE ERROR ."})
 		return
 	}
-
+	tokenExpiry := time.Now().Add(time.Hour * 10).Unix() // default expiry for production
+	if os.Getenv("APP_ENV") == "dev" {
+		tokenExpiry = time.Now().Add(time.Hour * 10000).Unix() // extended expiry for development
+	}
 	// Generate token. Store `user_id` as a string UUID to keep token claim types stable.
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_email": loginUser.Email,
 		"user_id":    loginUser.ID.String(),
 		//setting expiry to 10000 hours for testing , to be changed in prod.
-		"exp": time.Now().Add(time.Hour * 10000).Unix(),
+		"exp": tokenExpiry,
 	})
 
 	tokenString, err := token.SignedString([]byte(jwtSecret))

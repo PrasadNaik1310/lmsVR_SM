@@ -11,11 +11,11 @@ import (
 	"time"
 
 	"github.com/PrasadNaik1310/LMSVR_SM/db"
+	"github.com/joho/godotenv"
 
 	//"github.com/PrasadNaik1310/LMSVR_SM/handlers"
 	"github.com/PrasadNaik1310/LMSVR_SM/routes"
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 )
 
 func main() {
@@ -23,8 +23,9 @@ func main() {
 
 	if err := godotenv.Load(); err != nil {
 		log.Println("Env Env file not found , main file error")
-		return
+
 	}
+
 	r := gin.Default()
 	//r.Use(middleware.RecoveryMiddleware())
 

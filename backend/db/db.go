@@ -172,8 +172,10 @@ END$$;
 		log.Println("+++++++++++=================+++++++++====+++++++++")
 		log.Println("Starting seeding data for applications and enquiry")
 		time.Sleep(2 * time.Second) // let Dev know abt starting seeding
-		if err := seed.MigrateAndSeed(DB); err != nil {
-			log.Fatalf("Failed at data migration for applicationa and enquiry")
+		if os.Getenv("seedApplicationAndEnquires") == "true" {
+			if err := seed.MigrateAndSeed(DB); err != nil {
+				log.Fatalf("Failed at data migration for applicationa and enquiry")
+			}
 		}
 	}
 
@@ -263,7 +265,7 @@ func SeedData() error {
 			}
 		}
 	}
-
+	/* DO NOT UNCOMMENT THE FOLLOWING CODE BLOCK UNLESS YOU WANT TO FORCE ALL USERS WITHOUT A ROLE TO BE ASSIGNED THE DEFAULT ADMIN ROLE. THIS IS DANGEROUS IN PRODUCTION AND SHOULD ONLY BE USED FOR INITIAL SEEDING OR TESTING PURPOSES.
 	zeroUUID := uuid.UUID{} // all zeros = same as uuid.Nil, but explicit
 	if err := DB.Model(&models.User{}).
 		Where("role_id = ? OR role_id IS NULL", zeroUUID).
@@ -271,6 +273,7 @@ func SeedData() error {
 		log.Printf("Failed to assign default role to users without role: %v", err)
 		return err
 	}
+	*/
 	// Seed admission RBAC defaults
 	admissionRoleName := "admission_admin"
 	var admissionRole models.Role
@@ -409,6 +412,32 @@ func SeedData() error {
 	// Seed Teacher Role
 	// =====================================
 
+	teacherPermissions := []string{
+		"course.create",
+		"course.read",
+		"course.update",
+		"course.publish",
+		"course.invite",
+
+		"course_module.create",
+		"course_module.read",
+		"course_module.update",
+		"course_module.delete",
+
+		"course_lesson.create",
+		"course_lesson.read",
+		"course_lesson.update",
+		"course_lesson.delete",
+
+		"course_schedule.create",
+		"course_schedule.read",
+		"course_schedule.update",
+		"course_schedule.delete",
+
+		"course_log.create",
+		"course_log.read",
+		"course_log.update",
+	}
 	teacherRoleName := "teacher"
 
 	var teacherRole models.Role
@@ -429,7 +458,50 @@ func SeedData() error {
 			return err
 		}
 	}
+	for _, permName := range teacherPermissions {
+		var perm models.Permission
 
+		if err := DB.Where("name = ?", permName).First(&perm).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				perm = models.Permission{
+					ID:          uuid.New(),
+					Name:        permName,
+					Description: "Auto-seeded permission for teacher role",
+				}
+
+				if err := DB.Create(&perm).Error; err != nil {
+					return err
+				}
+			} else {
+				return err
+			}
+		}
+
+		var rolePerm models.RolePermission
+
+		if err := DB.Where(
+			"role_id = ? AND permission_id = ?",
+			teacherRole.ID,
+			perm.ID,
+		).First(&rolePerm).Error; err != nil {
+
+			if err == gorm.ErrRecordNotFound {
+
+				rolePerm = models.RolePermission{
+					ID:           uuid.New(),
+					RoleID:       teacherRole.ID,
+					PermissionID: perm.ID,
+				}
+
+				if err := DB.Create(&rolePerm).Error; err != nil {
+					return err
+				}
+
+			} else {
+				return err
+			}
+		}
+	}
 	// =====================================
 	// Seed Teacher User
 	// =====================================

@@ -23,7 +23,7 @@ func main() {
 
 	if err := godotenv.Load(); err != nil {
 		log.Println("Env Env file not found , main file error")
-
+		return
 	}
 	r := gin.Default()
 	//r.Use(middleware.RecoveryMiddleware())

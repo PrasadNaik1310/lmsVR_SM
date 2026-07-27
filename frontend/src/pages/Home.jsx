@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
+import { login } from "../services/auth.js";
 
 export default function Home() {
   useDocumentTitle("LMSVR SM - Login");
@@ -15,38 +16,33 @@ export default function Home() {
   }, []);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+  e.preventDefault();
+  setError("");
+  setLoading(true);
 
-    try {
-      const response = await fetch("http://localhost:8080/lms/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ useremail: email, password }),
-      });
+  try {
+    const data = await login({
+      useremail: email,
+      password,
+    });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.log(errorData)
-        console.log(localStorage)
-        throw new Error(errorData.message || "Login failed. Please check your credentials.");
-      }
+    localStorage.setItem("auth_token", data.token);
 
-      const data = await response.json();
-      localStorage.setItem("auth_token", data.token);
-      console.log("Login successful:", data);
-      alert("Login successful!");
-      navigate("/admissions");
-    } catch (err) {
-      setError(err.message || "Login failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    console.log("Login successful:", data);
 
+    navigate("/admissions");
+  } catch (err) {
+    console.error(err);
+
+    setError(
+      err.response?.data?.message ||
+      err.message ||
+      "Login failed. Please try again."
+    );
+  } finally {
+    setLoading(false);
+  }
+};
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-indigo-50 to-blue-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">

@@ -1,9 +1,7 @@
 services:
   frontend:
- #   build:
-     # context: ./frontend
-    #  dockerfile: Dockerfile
     image: prasadnaik1310/lms-frontend:latest
+    restart: unless-stopped
     ports:
       - "5173:5173"
     volumes:
@@ -29,21 +27,16 @@ services:
         mkdir -p /app/node_modules/.vite-temp
         chmod -R a+rwX /app/node_modules || true
         exec ./node_modules/.bin/vite --host 0.0.0.0 --port 5173
-        services:
+
   backend:
-  #  build:
-   #   context: ./backend
-    #  dockerfile: Dockerfile
     image: prasadnaik1310/lms-backend:latest
+    restart: unless-stopped
     ports:
       - "8080:8080"
     env_file:
       - ./backend/cmd/.env
 
   audit:
-    #build:
-    #  context: ./frontend
-   #   dockerfile: Dockerfile
     image: prasadnaik1310/lms-frontend:latest
     profiles:
       - audit
@@ -55,7 +48,7 @@ services:
       NODE_ENV: development
       PNPM_HOME: /pnpm
       TMPDIR: /tmp
-      PATH: /pnpm:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      PATH: /pnpm:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/usr/sbin:/bin
     security_opt:
       - no-new-privileges:true
     entrypoint:
@@ -72,4 +65,3 @@ services:
 volumes:
   frontend_node_modules:
   pnpm_store:
-  

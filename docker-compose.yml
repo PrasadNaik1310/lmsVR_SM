@@ -34,7 +34,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    image: lmsvr-sm-backend:dev
+    image: prasadnaik1310/lmsvr-sm-backend:latest
     ports:
       - "8080:8080"
     env_file:

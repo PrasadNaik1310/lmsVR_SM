@@ -213,6 +213,7 @@ func SeedData() error {
 		"company.batch.create",
 		"company.batch.read",
 		"course.create",
+		"course.read",
 		"admission.enquiry.create",
 		"admission.enquiry.read",
 		"admission.enquiry.update",

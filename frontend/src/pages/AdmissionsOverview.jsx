@@ -66,17 +66,17 @@ function ApplicationActionMenu({ application, onActionComplete }) {
     setOpen(false);
     setLoading(true);
     const token = localStorage.getItem("auth_token");
-
+const baseURL= import.meta.env.VITE_API_BASE_URL;
     try {
       if (action === "approve") {
-        const res = await fetch(`http://localhost:8080/lms/admissions/applications/${application.id}/approve`, {
+        const res = await fetch(`${baseURL}/admissions/applications/${application.id}/approve`, {
           method: "PATCH",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
           body: JSON.stringify({ application_id: application.id }),
         });
         if (!res.ok) throw new Error(`Error returned ${res.status}`);
       } else {
-        const res = await fetch(`http://localhost:8080/lms/admissions/applications/${application.id}/reject`, {
+        const res = await fetch(`${baseURL}/admissions/applications/${application.id}/reject`, {
           method: "PATCH",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
           body: JSON.stringify({}),

@@ -70,11 +70,13 @@ func CreateCourse(c *gin.Context) {
 		endDate = &t
 	}
 
-	if endDate.Before(*startDate) || endDate.Equal(*startDate) {
-		log.Printf("Error : endDates before or equal startDate")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "End Date must be after the start Date"})
+	if startDate != nil && endDate != nil {
+		if !endDate.After(*startDate) {
+			log.Printf("Error : endDates before or equal startDate")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "End Date must be after the start Date"})
 
-		return
+			return
+		}
 	}
 	/*userID := c.GetString("user_id")
 

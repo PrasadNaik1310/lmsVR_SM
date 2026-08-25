@@ -18,6 +18,31 @@ export async function listBatchesByCourse(courseId, params = {}, token) {
   return response.data;
 }
 
+export async function listAcademicSessions(token) {
+  const response = await http.get(`/company/sessions`, withAuth(token));
+  return response.data;
+}
+
+export async function createAcademicSession(payload, token) {
+  const response = await http.post(`/company/sessions`, payload, withAuth(token));
+  return response.data;
+}
+
+export async function getAcademicSession(sessionId, token) {
+  const response = await http.get(`/company/sessions/${sessionId}`, withAuth(token));
+  return response.data;
+}
+
+export async function updateAcademicSession(sessionId, payload, token) {
+  const response = await http.put(`/company/sessions/${sessionId}`, payload, withAuth(token));
+  return response.data;
+}
+
+export async function deleteAcademicSession(sessionId, token) {
+  const response = await http.delete(`/company/sessions/${sessionId}`, withAuth(token));
+  return response.data;
+}
+
 export async function listCoursesForUser(params = {}, token) {
   const response = await http.get(`/company/courses`, {
     ...withAuth(token),

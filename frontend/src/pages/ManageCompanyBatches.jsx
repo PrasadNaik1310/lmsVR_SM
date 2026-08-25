@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
+  createAcademicSession,
+  deleteAcademicSession,
+  getAcademicSession,
+  listAcademicSessions,
   listBatchesByCourse, 
   createBatchForCourse, 
   getBatchDetails, 
   listCoursesBySession, 
+  updateAcademicSession,
   assignCourseToSession,
   listCoursesForUser,
 } from "../api/manageCompany.js";
 
 const demo = {
-  sessions: [
-    { id: 'S-2025', name: '2025 - 2026', status: 'Active', start: '01 Jun, 2025', end: '31 May, 2026' },
-    { id: 'S-2024', name: '2024 - 2025', status: 'Active', start: '01 Jun, 2024', end: '31 May, 2025' },
-    { id: 'S-2023', name: '2023 - 2024', status: 'Completed', start: '01 Jun, 2023', end: '31 May, 2024' },
-  ],
   courses: [
     { id: 'C-201', title: 'Full Stack Web Development', level: 'Advanced', seats: '28/40', dates: '01 Jun, 2025 - 30 Nov, 2025', status: 'Active' },
     { id: 'C-314', title: 'UI/UX Design Fundamentals', level: 'Intermediate', seats: '18/30', dates: '15 Jun, 2025 - 15 Dec, 2025', status: 'Active' },
@@ -35,13 +35,23 @@ const demo = {
 
 export default function ManageCompanyBatches() {
   const navigate = useNavigate();
+  const [academicSessions, setAcademicSessions] = useState([]);
+  const [selectedSessionId, setSelectedSessionId] = useState("");
   const [batches, setBatches] = useState([]);
   const [courses, setCourses] = useState([]);
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [sessionCourses, setSessionCourses] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showAcademicSessionModal, setShowAcademicSessionModal] = useState(false);
   const [showCreateBatchModal, setShowCreateBatchModal] = useState(false);
+  const [editingAcademicSessionId, setEditingAcademicSessionId] = useState("");
+  const [academicSessionForm, setAcademicSessionForm] = useState({
+    name: "",
+    startDate: "",
+    endDate: "",
+    isActive: true,
+  });
   const [createBatchForm, setCreateBatchForm] = useState({
     courseId: "",
     batchName: "",
@@ -58,6 +68,26 @@ export default function ManageCompanyBatches() {
   };
 
   useEffect(() => {
+    const fetchAcademicSessions = async () => {
+      if (!token) return;
+      try {
+        setLoading(true);
+        const data = await listAcademicSessions(token);
+        const sessions = data.academic_sessions || [];
+        setAcademicSessions(sessions);
+        if (sessions.length > 0) {
+          const firstSessionId = sessions[0].id;
+          setSelectedSessionId(firstSessionId);
+          const sessionCourseData = await listCoursesBySession(firstSessionId, { page: 1, size: 20 }, token);
+          setSessionCourses((prev) => ({ ...prev, [firstSessionId]: sessionCourseData.courses || [] }));
+        }
+      } catch (err) {
+        console.error('Failed to fetch academic sessions', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     const fetchCourses = async () => {
       if (!token) return;
       try {
@@ -77,8 +107,127 @@ export default function ManageCompanyBatches() {
         setLoading(false);
       }
     };
+
+    fetchAcademicSessions();
     fetchCourses();
   }, [token]);
+
+  const openAcademicSessionModal = (session = null) => {
+    if (session) {
+      setEditingAcademicSessionId(session.id);
+      setAcademicSessionForm({
+        name: session.name || "",
+        startDate: session.start_date ? String(session.start_date).slice(0, 10) : "",
+        endDate: session.end_date ? String(session.end_date).slice(0, 10) : "",
+        isActive: Boolean(session.is_active),
+      });
+    } else {
+      setEditingAcademicSessionId("");
+      setAcademicSessionForm({
+        name: "",
+        startDate: "",
+        endDate: "",
+        isActive: true,
+      });
+    }
+    setShowAcademicSessionModal(true);
+    setError(null);
+  };
+
+  const closeAcademicSessionModal = () => {
+    setShowAcademicSessionModal(false);
+  };
+
+  const handleAcademicSessionInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setAcademicSessionForm((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  const refreshAcademicSessions = async () => {
+    const data = await listAcademicSessions(token);
+    const sessions = data.academic_sessions || [];
+    setAcademicSessions(sessions);
+    if (sessions.length === 0) {
+      setSelectedSessionId("");
+      setSessionCourses({});
+      return sessions;
+    }
+    if (!selectedSessionId || !sessions.some((session) => session.id === selectedSessionId)) {
+      setSelectedSessionId(sessions[0].id);
+    }
+    return sessions;
+  };
+
+  const handleSaveAcademicSession = async (e) => {
+    e.preventDefault();
+    if (!academicSessionForm.name || !academicSessionForm.startDate || !academicSessionForm.endDate) {
+      setError('Please fill all academic session fields.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const payload = {
+        name: academicSessionForm.name,
+        start_date: academicSessionForm.startDate,
+        end_date: academicSessionForm.endDate,
+        is_active: academicSessionForm.isActive,
+      };
+
+      if (editingAcademicSessionId) {
+        await updateAcademicSession(editingAcademicSessionId, payload, token);
+      } else {
+        await createAcademicSession(payload, token);
+      }
+
+      await refreshAcademicSessions();
+      closeAcademicSessionModal();
+      setError(null);
+    } catch (err) {
+      setError('Failed to save academic session: ' + err.message);
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleViewAcademicSession = async (sessionId) => {
+    try {
+      setLoading(true);
+      const data = await getAcademicSession(sessionId, token);
+      alert('Academic session details: ' + JSON.stringify(data.academic_session, null, 2));
+      setError(null);
+    } catch (err) {
+      setError('Failed to fetch academic session: ' + err.message);
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteAcademicSession = async (sessionId) => {
+    const confirmed = window.confirm('Delete this academic session? This does not delete courses.');
+    if (!confirmed) return;
+
+    try {
+      setLoading(true);
+      await deleteAcademicSession(sessionId, token);
+      await refreshAcademicSessions();
+      if (selectedSessionId === sessionId) {
+        setSelectedSessionId("");
+        setSessionCourses({});
+      }
+      setError(null);
+    } catch (err) {
+      setError('Failed to delete academic session: ' + err.message);
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Fetch batches by course
   const handleFetchBatchesByCourse = async (courseId) => {
@@ -172,7 +321,8 @@ export default function ManageCompanyBatches() {
     try {
       setLoading(true);
       const data = await listCoursesBySession(sessionId, { page: 1, size: 20 }, token);
-      setSessionCourses({ ...sessionCourses, [sessionId]: data.courses || [] });
+      setSessionCourses((prev) => ({ ...prev, [sessionId]: data.courses || [] }));
+      setSelectedSessionId(sessionId);
       console.log('Courses in session:', data);
       setError(null);
     } catch (err) {
@@ -236,7 +386,13 @@ export default function ManageCompanyBatches() {
                 <svg width="16" height="16" fill="none" className="text-slate-400"><circle cx="8" cy="8" r="7" stroke="#E5E7EB"/></svg>
                 <input className="w-80 text-sm outline-none" placeholder="Search anything..." />
               </div>
-              <button className="rounded bg-indigo-600 px-4 py-2 text-white">+ Academic Session</button>
+              <button
+                type="button"
+                onClick={() => openAcademicSessionModal()}
+                className="rounded bg-indigo-600 px-4 py-2 text-white"
+              >
+                + Academic Session
+              </button>
               {error && <div className="text-red-600 text-sm">{error}</div>}
               {loading && <div className="text-blue-600 text-sm">Loading...</div>}
             </div>
@@ -245,23 +401,23 @@ export default function ManageCompanyBatches() {
           <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
             <div className="rounded-xl border border-slate-100 bg-white p-4">
               <p className="text-xs text-slate-500">Academic Sessions</p>
-              <p className="mt-2 text-2xl font-semibold">3</p>
-              <p className="text-sm text-slate-400">2 upcoming</p>
+              <p className="mt-2 text-2xl font-semibold">{academicSessions.length}</p>
+              <p className="text-sm text-slate-400">{academicSessions.filter((session) => session.is_active).length} active</p>
             </div>
             <div className="rounded-xl border border-slate-100 bg-white p-4">
               <p className="text-xs text-slate-500">Courses / Packages</p>
-              <p className="mt-2 text-2xl font-semibold">24</p>
-              <p className="text-sm text-slate-400">3 draft</p>
+              <p className="mt-2 text-2xl font-semibold">{(courses.length ? courses : demo.courses).length}</p>
+              <p className="text-sm text-slate-400">{(courses.length ? courses : demo.courses).filter((course) => (course.status || course.Status || "").toLowerCase() === "draft").length} draft</p>
             </div>
             <div className="rounded-xl border border-slate-100 bg-white p-4">
               <p className="text-xs text-slate-500">Batches</p>
-              <p className="mt-2 text-2xl font-semibold">18</p>
-              <p className="text-sm text-slate-400">5 active</p>
+              <p className="mt-2 text-2xl font-semibold">{batches.length}</p>
+              <p className="text-sm text-slate-400">{batches.filter((batch) => (batch.status || batch.Status || "").toLowerCase() === "active").length} active</p>
             </div>
             <div className="rounded-xl border border-slate-100 bg-white p-4">
               <p className="text-xs text-slate-500">Team Members</p>
-              <p className="mt-2 text-2xl font-semibold">12</p>
-              <p className="text-sm text-slate-400">2 inactive</p>
+              <p className="mt-2 text-2xl font-semibold">{demo.team.length}</p>
+              <p className="text-sm text-slate-400">{demo.team.filter((member) => member.status !== 'Active').length} inactive</p>
             </div>
           </section>
 
@@ -270,41 +426,142 @@ export default function ManageCompanyBatches() {
               <div className="rounded-xl border border-slate-100 bg-white p-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-slate-900">Academic Sessions</h3>
-                  <a className="text-sm text-indigo-600 cursor-pointer">View all</a>
+                  <div className="flex items-center gap-3">
+                    <a
+                      onClick={refreshAcademicSessions}
+                      className="text-sm text-indigo-600 cursor-pointer"
+                    >
+                      View all
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => openAcademicSessionModal()}
+                      className="rounded bg-white px-3 py-1 text-sm border border-slate-200"
+                    >
+                      + Add Session
+                    </button>
+                  </div>
                 </div>
-                <div className="mt-4 overflow-x-auto">
-                  <table className="min-w-full text-left text-sm">
-                    <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-                      <tr>
-                        <th className="px-4 py-3">Session Name</th>
-                        <th className="px-4 py-3">Status</th>
-                        <th className="px-4 py-3">Start Date</th>
-                        <th className="px-4 py-3">End Date</th>
-                        <th className="px-4 py-3">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {demo.sessions.map((s) => (
-                        <tr key={s.id} className="border-t border-slate-100">
-                          <td className="px-4 py-3">{s.name}</td>
-                          <td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs ${s.status==='Active'? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>{s.status}</span></td>
-                          <td className="px-4 py-3">{s.start}</td>
-                          <td className="px-4 py-3">{s.end}</td>
-                          <td className="px-4 py-3">
-                            <button 
-                              onClick={() => handleListCoursesBySession(s.id)}
-                              className="text-indigo-600 hover:text-indigo-700 text-sm"
-                            >
-                              View Courses
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="mt-4 grid gap-3">
+                  {academicSessions.length > 0 ? (
+                    academicSessions.map((session) => (
+                      <div
+                        key={session.id}
+                        className="rounded-xl border border-slate-100 bg-slate-50 p-3"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-xs text-slate-500">
+                              {session.is_active ? 'Active' : 'Inactive'}
+                            </p>
+                            <p className="mt-1 font-semibold text-slate-900">{session.name}</p>
+                          </div>
+
+                          <span className={`rounded-full px-2 py-1 text-xs ${session.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                            {session.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+
+                        <p className="mt-2 text-xs text-slate-500">
+                          {session.start_date ? new Date(session.start_date).toLocaleDateString() : ''}
+                          {session.start_date && session.end_date ? ' - ' : ''}
+                          {session.end_date ? new Date(session.end_date).toLocaleDateString() : ''}
+                        </p>
+
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleListCoursesBySession(session.id)}
+                            className="text-sm text-indigo-600 hover:text-indigo-700"
+                          >
+                            View Courses
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleViewAcademicSession(session.id)}
+                            className="text-sm text-slate-700 hover:text-slate-900"
+                          >
+                            View
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openAcademicSessionModal(session)}
+                            className="text-sm text-slate-700 hover:text-slate-900"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAcademicSession(session.id)}
+                            className="text-sm text-rose-600 hover:text-rose-700"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-slate-500">
+                      <p className="text-sm">No academic sessions available</p>
+                      <button
+                        type="button"
+                        onClick={() => openAcademicSessionModal()}
+                        className="mt-3 rounded bg-indigo-600 px-3 py-1 text-sm text-white"
+                      >
+                        Create Session
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <p className="mt-3 text-xs text-slate-500">Total 3 sessions</p>
+                <p className="mt-3 text-xs text-slate-500">Total {academicSessions.length} sessions</p>
               </div>
+
+              {selectedSessionId && (
+                <div className="rounded-xl border border-slate-100 bg-white p-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-slate-900">Session Courses</h3>
+                    <button
+                      type="button"
+                      onClick={() => handleListCoursesBySession(selectedSessionId)}
+                      className="text-sm text-indigo-600 cursor-pointer"
+                    >
+                      Refresh
+                    </button>
+                  </div>
+
+                  <div className="mt-4 grid gap-3">
+                    {(sessionCourses[selectedSessionId] || []).length > 0 ? (
+                      (sessionCourses[selectedSessionId] || []).map((course) => (
+                        <div key={course.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-xs text-slate-500">{course.level}</p>
+                              <p className="mt-1 font-semibold text-slate-900">{course.title}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm text-slate-700">
+                                {course.booked_seats ? `${course.booked_seats}/${course.total_seats}` : course.total_seats}
+                              </p>
+                            </div>
+                          </div>
+                          <p className="mt-2 text-xs text-slate-500">
+                            {course.start_date ? new Date(course.start_date).toLocaleDateString() : ''}
+                            {course.start_date && course.end_date ? ' - ' : ''}
+                            {course.end_date ? new Date(course.end_date).toLocaleDateString() : ''}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-slate-500">
+                        <p className="text-sm">No courses assigned to this session</p>
+                      </div>
+                    )}
+                  </div>
+                  <p className="mt-3 text-xs text-slate-500">
+                    Total {(sessionCourses[selectedSessionId] || []).length} courses
+                  </p>
+                </div>
+              )}
 
               <div className="rounded-xl border border-slate-100 bg-white p-4">
                 <div className="flex items-center justify-between">
@@ -436,6 +693,100 @@ export default function ManageCompanyBatches() {
           </section>
         </main>
       </div>
+
+      {showAcademicSessionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-slate-900">
+                {editingAcademicSessionId ? 'Edit Academic Session' : 'Create Academic Session'}
+              </h3>
+              <button
+                type="button"
+                onClick={closeAcademicSessionModal}
+                className="rounded px-2 py-1 text-slate-500 hover:bg-slate-100"
+              >
+                x
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAcademicSession} className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Session Name</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={academicSessionForm.name}
+                  onChange={handleAcademicSessionInputChange}
+                  className="w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                  placeholder="e.g. 2026 - 2027"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Start Date</label>
+                  <input
+                    type="date"
+                    name="startDate"
+                    value={academicSessionForm.startDate}
+                    onChange={handleAcademicSessionInputChange}
+                    className="w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">End Date</label>
+                  <input
+                    type="date"
+                    name="endDate"
+                    value={academicSessionForm.endDate}
+                    onChange={handleAcademicSessionInputChange}
+                    className="w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Status</label>
+                <select
+                  name="isActive"
+                  value={academicSessionForm.isActive ? 'true' : 'false'}
+                  onChange={(e) =>
+                    setAcademicSessionForm((prev) => ({
+                      ...prev,
+                      isActive: e.target.value === 'true',
+                    }))
+                  }
+                  className="w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                >
+                  <option value="true">Active</option>
+                  <option value="false">Inactive</option>
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={closeAcademicSessionModal}
+                  className="rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700 disabled:opacity-50"
+                  disabled={loading}
+                >
+                  {loading ? 'Saving...' : (editingAcademicSessionId ? 'Update Session' : 'Create Session')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {showCreateBatchModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">

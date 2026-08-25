@@ -208,6 +208,9 @@ func SeedData() error {
 	}
 
 	permissionNames := []string{
+		"company.session.create",
+		"company.session.update",
+		"company.session.delete",
 		"company.session.assign",
 		"company.session.read",
 		"company.batch.create",

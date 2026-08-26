@@ -3,12 +3,12 @@ import { NavLink } from "react-router-dom";
 const routeLinks = [
   { label: "Dashboard", to: "/" },
   { label: "Admissions", to: "/admissions" },
+  { label: "Academic Sessions", to: "/company/academic-sessions" },
   { label: "Manage Company", to: "/company/batches" },
   { label: "Courses",to: "/courses"}
 ];
 
 const sectionLinks = [
-  { label: "Academic Sessions", href: "academic-sessions" },
   { label: "Courses / Packages", href: "#courses-packages" },
   { label: "Batches", href: "#batches" },
   { label: "Internal Team", href: "#internal-team" },

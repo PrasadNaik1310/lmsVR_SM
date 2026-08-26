@@ -7,6 +7,7 @@ import AdmissionsOverview from "../pages/AdmissionsOverview.jsx";
 import CourseManagement from "../pages/CourseManagement.jsx";
 import CourseDetails from "../pages/CourseDetails";
 import ModuleDetails from "../pages/ModuleDetails";
+import AcademicSessionManagement from "../pages/AcademicSessionManagement";
 export const router = createBrowserRouter([
   {
     path: "/",
@@ -19,6 +20,10 @@ export const router = createBrowserRouter([
       {
         path: "company/batches",
         element: <ManageCompanyBatches />,
+      },
+      {
+        path: "company/academic-sessions",
+        element: <AcademicSessionManagement />,
       },
       {
         path: "admissions",

@@ -216,7 +216,7 @@ func SeedData() error {
 		"company.batch.create",
 		"company.batch.read",
 		"course.create",
-		"course.read",
+		"course.read", //
 		"admission.enquiry.create",
 		"admission.enquiry.read",
 		"admission.enquiry.update",
@@ -231,6 +231,18 @@ func SeedData() error {
 		"course_log.create",
 		"course_log.read",
 		"course_log.update",
+		//Permissions after this were added later during PROD debugging
+		"course.update",
+		"course.publish",
+		"course.invite",
+		"course_module.create",
+		"course_module.read ",
+		"course_module.update",
+		"course_module.delete",
+		"course_lesson.create",
+		"course_lesson.read",
+		"course_lesson.update",
+		"course_lesson.delete",
 	}
 
 	for _, permName := range permissionNames {

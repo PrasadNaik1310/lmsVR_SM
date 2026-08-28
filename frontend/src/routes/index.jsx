@@ -8,6 +8,7 @@ import CourseManagement from "../pages/CourseManagement.jsx";
 import CourseDetails from "../pages/CourseDetails";
 import ModuleDetails from "../pages/ModuleDetails";
 import AcademicSessionManagement from "../pages/AcademicSessionManagement";
+import InternalTeam from "../pages/InternalTeam.jsx";
 export const router = createBrowserRouter([
   {
     path: "/",
@@ -40,7 +41,11 @@ export const router = createBrowserRouter([
       {
         path: "/modules/:id",
         element: <ModuleDetails />,
-      }
+      },
+      {
+  path: "internal-team",
+  element: <InternalTeam />,
+},
     ],
   },
 ]);

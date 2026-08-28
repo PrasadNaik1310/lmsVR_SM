@@ -77,3 +77,19 @@ export async function assignCourseToSession(sessionId, courseId, token) {
   );
   return response.data;
 }
+export async function createCompanyUser(payload, token) {
+  const response = await http.post(
+    `/company/users`,
+    payload,
+    withAuth(token)
+  );
+  return response.data;
+}
+export async function listCompanyUsers(token) {
+  const response = await http.get(
+    `/company/users`,
+    withAuth(token)
+  );
+
+  return response.data;
+}

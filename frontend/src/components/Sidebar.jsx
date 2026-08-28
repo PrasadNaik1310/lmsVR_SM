@@ -5,13 +5,14 @@ const routeLinks = [
   { label: "Admissions", to: "/admissions" },
   { label: "Academic Sessions", to: "/company/academic-sessions" },
   { label: "Manage Company", to: "/company/batches" },
-  { label: "Courses",to: "/courses"}
+  { label: "Courses",to: "/courses"},
+  {label : "Internal Team", to: "/internal-team"},
 ];
 
 const sectionLinks = [
   { label: "Courses / Packages", href: "#courses-packages" },
   { label: "Batches", href: "#batches" },
-  { label: "Internal Team", href: "#internal-team" },
+ // { label: "Internal Team", href: "#internal-team" },
 ];
 
 export default function Sidebar({ onLogout }) {

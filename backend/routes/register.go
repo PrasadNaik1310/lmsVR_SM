@@ -12,6 +12,7 @@ func RegisterRoutes(r *gin.Engine) {
 		registerAuthRoutes(api) // dont move api.use() line above this line, it will break login page
 		api.Use(middleware.AuthMiddleWare())
 		registerCompanyRoutes(api)
+		RegisterCompanyUserRoutes(api)
 		RegisterAdmissionRoutes(api)
 		RegisterCourseRoutes(api)
 		RegisterCourseModuleRoutes(api)
@@ -27,5 +28,6 @@ func registerCompanyRoutes(api *gin.RouterGroup) {
 	{
 		registerCompanySessionRoutes(company)
 		registerCompanyBatchRoutes(company)
+
 	}
 }

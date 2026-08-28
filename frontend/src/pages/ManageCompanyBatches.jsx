@@ -12,7 +12,9 @@ import {
   updateAcademicSession,
   assignCourseToSession,
   listCoursesForUser,
+  createCompanyUser,
 } from "../api/manageCompany.js";
+
 
 const demo = {
   courses: [
@@ -909,4 +911,26 @@ export default function ManageCompanyBatches() {
       )}
     </div>
   );
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+
+const [memberForm, setMemberForm] = useState({
+  first_name: "",
+  last_name: "",
+  email: "",
+  phone: "",
+  password: "",
+  role: "teacher",
+
+  // student
+  enrollment_number: "",
+  date_of_birth: "",
+  address: "",
+  admission_date: "",
+
+  // teacher
+  specialization: "",
+  bio: "",
+  joining_date: "",
+});
 }
+

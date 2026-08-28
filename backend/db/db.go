@@ -243,6 +243,8 @@ func SeedData() error {
 		"course_lesson.read",
 		"course_lesson.update",
 		"course_lesson.delete",
+		"user.create", // this permission is for admin to create users(students , teachers, admins).
+		"user.read",
 	}
 
 	for _, permName := range permissionNames {

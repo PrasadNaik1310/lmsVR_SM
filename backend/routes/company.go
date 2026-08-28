@@ -6,12 +6,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterCompanyRoutes(api *gin.RouterGroup) {
+func RegisterCompanyUserRoutes(api *gin.RouterGroup) {
 	company := api.Group("/company")
 	company.Use(middleware.AuthMiddleWare())
 
+	company.POST("/users", middleware.RequirePermission("user.create"), handlers.CreateCompanyUser)
+	company.GET("/users", middleware.RequirePermission("user.read"), handlers.ListCompanyUsers)
 	// Sessions
-	sessions := company.Group("/sessions")
+	/*sessions := company.Group("/sessions")
 	{
 		sessions.PUT(":session_id/courses/:course_id/assign", middleware.RequirePermission("company.session.assign"), handlers.AssignCourseToSession)
 		sessions.GET(":session_id/courses", middleware.RequirePermission("company.session.read"), handlers.ListCoursesBySession)
@@ -22,5 +24,5 @@ func RegisterCompanyRoutes(api *gin.RouterGroup) {
 	{
 		courses.POST(":course_id/batches", middleware.RequirePermission("company.batch.create"), handlers.CreateBatchForCourse)
 		courses.GET(":course_id/batches/:batch_id", middleware.RequirePermission("company.batch.read"), handlers.GetBatchDetails)
-	}
+	}*/
 }

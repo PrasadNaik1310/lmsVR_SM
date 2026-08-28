@@ -34,8 +34,9 @@ export default function AcademicSessionManagement() {
       setLoading(true);
 
       const data = await listAcademicSessions(token);
+      console.log("ACADEMIC SESSIONS RESPONSE:", data);
 
-      setSessions(data.sessions || []);
+      setSessions(data.academic_sessions || []);
     } catch (err) {
       console.error("Failed to load academic sessions:", err);
       console.error("Status:", err.response?.status);

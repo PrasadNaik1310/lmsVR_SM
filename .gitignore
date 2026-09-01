@@ -144,6 +144,7 @@ vite.config.ts.timestamp-*
 # md files
 *.md
 !README.md
+!LMS_AWS_Deployment_Manual.md
 #local compiled binary
 cmd
 #Zip files for modules
